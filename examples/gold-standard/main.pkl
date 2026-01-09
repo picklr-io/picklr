@@ -1,0 +1,278 @@
+amends "@pklr/Config.pkl"
+import "@pklr/docker/Docker.pkl"
+
+docker {
+  networks {
+    ["gold-public-net"] {
+      driver = "bridge"
+    }
+    ["gold-internal-net"] {
+      driver = "bridge"
+      internal = true
+    }
+  }
+
+  volumes {
+    ["postgres_data"] {}
+    ["redis_data"] {}
+    ["minio_data"] {}
+    ["prometheus_data"] {}
+    ["grafana_data"] {}
+  }
+
+  containers {
+    // ==========================================================
+    // TRAEFIK (API GATEWAY)
+    // ==========================================================
+    ["gold-traefik"] {
+      image = "traefik:v3.0"
+      command {
+        "--api.dashboard=true"
+        "--providers.docker=true"
+        "--providers.docker.exposedbydefault=false"
+        "--entrypoints.web.address=:80"
+      }
+      ports {
+        ["8091"] = 80
+        ["8082"] = 8080
+      }
+      volumes {
+        "/var/run/docker.sock:/var/run/docker.sock:ro"
+      }
+      restart = "unless-stopped"
+      networks { "gold-public-net" }
+      logging {
+        driver = "json-file"
+        options {
+          ["max-size"] = "10m"
+          ["max-file"] = "3"
+        }
+      }
+    }
+
+    // ==========================================================
+    // REST API
+    // ==========================================================
+    ["gold-rest-api"] {
+      image = "node:20-alpine"
+      // workingDir not supported in image yet? added to schema.
+      workingDir = "/app"
+      command { "sh"; "-c"; "npm install && node index.js" }
+      volumes {
+        "./services/rest-api:/app"
+      }
+      env {
+        ["PORT"] = "3000"
+        ["DATABASE_URL"] = "postgres://app:${POSTGRES_PASSWORD}@gold-postgres:5432/app"
+        ["REDIS_URL"] = "redis://gold-redis:6379"
+        ["S3_ENDPOINT"] = "http://gold-minio:9000"
+        ["S3_ACCESS_KEY"] = "minioadmin"
+      }
+      secrets {
+        new Docker.Secret {
+          source = "postgres_password"
+          target = "/run/secrets/postgres_password"
+          file = "./secrets/postgres_password.txt"
+        }
+        new Docker.Secret {
+          source = "minio_password"
+          target = "/run/secrets/minio_password"
+          file = "./secrets/minio_password.txt"
+        }
+      }
+      dependsOn { "gold-postgres"; "gold-redis"; "gold-minio" }
+      labels {
+        ["traefik.enable"] = "true"
+        ["traefik.http.routers.rest.rule"] = "PathPrefix(`/api`)"
+        ["traefik.http.services.rest.loadbalancer.server.port"] = "3000"
+      }
+      restart = "unless-stopped"
+      networks { "public-net"; "internal-net" }
+      healthcheck {
+        test { "CMD"; "wget"; "-qO-"; "http://localhost:3000/health" }
+        interval = "10s"
+        retries = 5
+      }
+      logging {
+        driver = "json-file"
+        options {
+          ["max-size"] = "10m"
+          ["max-file"] = "3"
+        }
+      }
+    }
+
+    // ==========================================================
+    // gRPC API
+    // ==========================================================
+    ["gold-grpc-api"] {
+      image = "golang:1.23-alpine"
+      workingDir = "/app"
+      command { "sh"; "-c"; "go mod tidy && go run main.go" }
+      volumes {
+        "./services/grpc-api:/app"
+      }
+      env {
+        ["GRPC_PORT"] = "50051"
+      }
+      restart = "unless-stopped"
+      networks { "gold-public-net"; "gold-internal-net" }
+      healthcheck {
+        test { "CMD"; "grpcurl"; "-plaintext"; "localhost:50051"; "list" }
+        interval = "15s"
+        retries = 5
+      }
+      logging {
+        driver = "json-file"
+        options {
+          ["max-size"] = "10m"
+          ["max-file"] = "3"
+        }
+      }
+    }
+
+    // ==========================================================
+    // WEBSOCKET API
+    // ==========================================================
+    ["gold-websocket-api"] {
+      image = "node:20-alpine"
+      workingDir = "/app"
+      command { "sh"; "-c"; "npm install && node ws.js" }
+      volumes {
+        "./services/websocket-api:/app"
+      }
+      env {
+        ["PORT"] = "4000"
+      }
+      labels {
+        ["traefik.enable"] = "true"
+        ["traefik.http.routers.ws.rule"] = "PathPrefix(`/ws`)"
+        ["traefik.http.services.ws.loadbalancer.server.port"] = "4000"
+      }
+      restart = "unless-stopped"
+      networks { "gold-public-net" }
+      healthcheck {
+        test { "CMD"; "wget"; "-qO-"; "http://localhost:4000" }
+        interval = "10s"
+        retries = 5
+      }
+    }
+
+    // ==========================================================
+    // POSTGRES
+    // ==========================================================
+    ["gold-postgres"] {
+      image = "postgres:16"
+      env {
+        ["POSTGRES_USER"] = "app"
+        ["POSTGRES_DB"] = "app"
+        ["POSTGRES_PASSWORD_FILE"] = "/run/secrets/postgres_password"
+      }
+      secrets {
+        new Docker.Secret {
+          source = "postgres_password"
+          target = "/run/secrets/postgres_password"
+          file = "./secrets/postgres_password.txt"
+        }
+      }
+      volumes {
+        "postgres_data:/var/lib/postgresql/data"
+      }
+      restart = "unless-stopped"
+      networks { "gold-internal-net" }
+      healthcheck {
+        test { "CMD-SHELL"; "pg_isready -U app" }
+        interval = "10s"
+        retries = 5
+      }
+    }
+
+    // ==========================================================
+    // REDIS
+    // ==========================================================
+    ["gold-redis"] {
+      image = "redis:7"
+      command { "redis-server"; "--appendonly"; "yes" }
+      volumes {
+        "redis_data:/data"
+      }
+      restart = "unless-stopped"
+      networks { "gold-internal-net" }
+      healthcheck {
+        test { "CMD"; "redis-cli"; "ping" }
+        interval = "10s"
+        retries = 5
+      }
+    }
+
+    // ==========================================================
+    // MINIO
+    // ==========================================================
+    ["gold-minio"] {
+      image = "minio/minio:latest"
+      command { "server"; "/data"; "--console-address"; ":9001" }
+      env {
+        ["MINIO_ROOT_USER"] = "minioadmin"
+        ["MINIO_ROOT_PASSWORD_FILE"] = "/run/secrets/minio_password"
+      }
+      secrets {
+        new Docker.Secret {
+          source = "minio_password"
+          target = "/run/secrets/minio_password"
+          file = "./secrets/minio_password.txt"
+        }
+      }
+      volumes {
+        "minio_data:/data"
+      }
+      ports {
+        ["9010"] = 9000
+        ["9011"] = 9001
+      }
+      restart = "unless-stopped"
+      networks { "gold-public-net"; "gold-internal-net" }
+      healthcheck {
+        test { "CMD"; "curl"; "-f"; "http://localhost:9000/minio/health/live" }
+        interval = "15s"
+        retries = 5
+      }
+    }
+
+    // ==========================================================
+    // PROMETHEUS
+    // ==========================================================
+    ["gold-prometheus"] {
+      image = "prom/prometheus:latest"
+      // profiles not supported directly, using as comment/labels?
+      volumes {
+        "./observability/prometheus.yml:/etc/prometheus/prometheus.yml"
+        "prometheus_data:/prometheus"
+      }
+      ports {
+        ["9100"] = 9090
+      }
+      restart = "unless-stopped"
+      networks { "gold-internal-net" }
+    }
+
+    // ==========================================================
+    // GRAFANA
+    // ==========================================================
+    ["gold-grafana"] {
+      image = "grafana/grafana:latest"
+      env {
+        ["GF_SECURITY_ADMIN_USER"] = "admin"
+        ["GF_SECURITY_ADMIN_PASSWORD"] = "admin"
+      }
+      volumes {
+        "grafana_data:/var/lib/grafana"
+      }
+      ports {
+        ["3002"] = 3000
+      }
+      dependsOn { "gold-prometheus" }
+      restart = "unless-stopped"
+      networks { "gold-public-net" }
+    }
+  }
+}

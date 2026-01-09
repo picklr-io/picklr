@@ -3,6 +3,7 @@ package eval
 import (
 	"context"
 	"fmt"
+	"net/url"
 
 	"github.com/apple/pkl-go/pkl"
 	"github.com/picklr-io/picklr/internal/ir"
@@ -21,6 +22,11 @@ func NewEvaluator(projectDir string) *Evaluator {
 
 // LoadConfig evaluates the main configuration file and returns the IR.
 func (e *Evaluator) LoadConfig(ctx context.Context, entryPoint string, properties map[string]string) (*ir.Config, error) {
+	u, err := url.Parse("file://" + e.projectDir + "/")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse project directory URL: %w", err)
+	}
+
 	opts := []func(*pkl.EvaluatorOptions){pkl.PreconfiguredOptions}
 	if len(properties) > 0 {
 		opts = append(opts, func(o *pkl.EvaluatorOptions) {
@@ -33,7 +39,7 @@ func (e *Evaluator) LoadConfig(ctx context.Context, entryPoint string, propertie
 		})
 	}
 
-	evaluator, err := pkl.NewEvaluator(ctx, opts...)
+	evaluator, err := pkl.NewProjectEvaluator(ctx, u, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create PKL evaluator: %w", err)
 	}

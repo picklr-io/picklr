@@ -6,14 +6,25 @@ class Network extends Core.Resource {
   provider = "docker"
   type = "docker_network"
 
+  hidden name: String = ""
+
   /// The driver to use (e.g., "bridge", "overlay").
-  driver: String = "bridge"
+  hidden driver: String = "bridge"
 
   /// Check for duplicate networks
-  checkDuplicate: Boolean = true
+  hidden checkDuplicate: Boolean = true
+
+  /// Restrict external access to the network.
+  hidden internal: Boolean = false
+
+  /// Labels to add to the network.
+  hidden labels: Mapping<String, String>?
 
   properties = new {
+    ["name"] = name
     ["driver"] = driver
     ["checkDuplicate"] = checkDuplicate
+    ["internal"] = internal
+    ["labels"] = labels
   }
 }

@@ -6,10 +6,13 @@ class Volume extends Core.Resource {
   provider = "docker"
   type = "docker_volume"
 
+  hidden name: String = ""
+
   /// The driver to use (e.g., "local").
-  driver: String = "local"
+  hidden driver: String = "local"
 
   properties = new {
+    ["name"] = name
     ["driver"] = driver
   }
 }

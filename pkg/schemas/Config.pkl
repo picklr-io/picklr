@@ -10,5 +10,9 @@ docker: Docker.Config?
 // Future providers...
 // aws: AWS.Config?
 
+/// Flattened list of all resources for the engine.
+resources: Listing<Resource.Resource> =
+  (if (docker != null) docker.allResources else new Listing {})
+// + (if (aws != null) aws.allResources else new Listing {})
 /// Output values to expose.
 outputs: Mapping<String, Any>?

@@ -6,22 +6,46 @@ class Container extends Core.Resource {
   provider = "docker"
   type = "docker_container"
 
+  hidden name: String = ""
+
   /// The ID of the image to run.
-  image: String
+  hidden image: String
 
   /// The command to run in the container.
-  command: Listing<String>?
+  hidden command: Listing<String>?
 
   /// Port mappings (Host -> Container).
-  ports: Mapping<String, Int>?
+  hidden ports: Mapping<String, Int>?
 
   /// Environment variables.
-  env: Mapping<String, String>?
+  hidden env: Mapping<String, String>?
 
   /// Networks to attract to
-  networks: Listing<String>?
+  hidden networks: Listing<String>?
+
+  /// Labels to add to the container.
+  hidden labels: Mapping<String, String>?
+
+  /// Working directory inside the container.
+  hidden workingDir: String?
+
+  /// User to run the container as.
+  hidden user: String?
+
+  /// Restart policy ("no", "always", "unless-stopped", "on-failure").
+  hidden restart: String = "no"
+
+  /// Healthcheck configuration.
+  hidden healthcheck: Healthcheck?
+
+  /// Logging configuration.
+  hidden logging: Logging?
+
+  /// Secrets to expose to the container.
+  hidden secrets: Listing<Secret>?
 
   properties = new {
+    ["name"] = name
     ["image"] = image
 
     ["command"] = command
@@ -29,8 +53,52 @@ class Container extends Core.Resource {
     ["env"] = env
     ["networks"] = networks
     ["volumes"] = volumes
+
+    ["labels"] = labels
+    ["workingDir"] = workingDir
+    ["user"] = user
+    ["restart"] = restart
+    ["healthcheck"] = healthcheck?.toMap()
+    ["logging"] = logging?.toMap()
+    ["secrets"] = if (secrets != null) new Listing { for (s in secrets) { s.toMap() } } else null
   }
 
   /// Volumes to mount. Format: "volume_name:/target/path" or "/host/path:/container/path"
-  volumes: Listing<String>?
+  hidden volumes: Listing<String>?
+}
+
+class Healthcheck {
+  /// The test command (e.g., ["CMD", "curl", "-f", "http://localhost/"]).
+  test: Listing<String>
+
+  /// Interval between healthchecks (e.g., "30s").
+  interval: String = "30s"
+
+  /// Timeout for the healthcheck (e.g., "30s").
+  timeout: String = "30s"
+
+  /// Start period for the container to initialize (e.g., "0s").
+  startPeriod: String = "0s"
+
+  /// Number of retries.
+  retries: Int = 3
+}
+
+class Logging {
+  /// Logging driver (e.g., "json-file", "syslog").
+  driver: String = "json-file"
+
+  /// Driver options.
+  options: Mapping<String, String>?
+}
+
+class Secret {
+  /// Name of the secret.
+  source: String
+
+  /// Target path inside the container.
+  target: String
+
+  /// File path on the host.
+  file: String
 }

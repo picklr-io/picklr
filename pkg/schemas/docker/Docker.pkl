@@ -1,5 +1,6 @@
 module picklr.docker.Docker
 
+import "../Resource.pkl" as Core
 import "Container.pkl" as ContainerModule
 import "Image.pkl" as ImageModule
 import "Network.pkl" as NetworkModule
@@ -10,9 +11,21 @@ class Config {
   networks: Mapping<String, NetworkModule.Network> = new {}
   volumes: Mapping<String, VolumeModule.Volume> = new {}
   images: Mapping<String, ImageModule.Image> = new {}
+
+  /// All resources in this provider, flattened and named.
+  hidden allResources: Listing<Core.Resource> = new Listing {
+    for (entry in networks.toMap().entries) { (entry.value) { name = entry.key } }
+    for (entry in volumes.toMap().entries) { (entry.value) { name = entry.key } }
+    for (entry in images.toMap().entries) { (entry.value) { name = entry.key } }
+    for (entry in containers.toMap().entries) { (entry.value) { name = entry.key } }
+  }
 }
 
 typealias Container = ContainerModule.Container
 typealias Network = NetworkModule.Network
 typealias Volume = VolumeModule.Volume
 typealias Image = ImageModule.Image
+
+typealias Secret = ContainerModule.Secret
+typealias Healthcheck = ContainerModule.Healthcheck
+typealias Logging = ContainerModule.Logging

@@ -10,13 +10,13 @@ class Image extends Core.Resource {
   name: String
 
   /// Path to build context (directory containing Dockerfile)
-  buildContext: String?
+  hidden buildContext: String?
 
   /// Dockerfile name (defaults to "Dockerfile")
-  dockerfile: String = "Dockerfile"
+  hidden dockerfile: String = "Dockerfile"
 
   /// Force pull/build
-  force: Boolean = false
+  hidden force: Boolean = false
 
   properties = new {
     ["name"] = name

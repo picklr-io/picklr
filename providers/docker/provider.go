@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -223,30 +226,82 @@ func (p *Provider) applyContainer(ctx context.Context, req *pb.ApplyRequest) (*p
 		}
 	}
 
+	var binds []string
+	for _, v := range desired.Volumes {
+		parts := strings.SplitN(v, ":", 2)
+		if len(parts) > 0 {
+			if strings.HasPrefix(parts[0], "./") || strings.HasPrefix(parts[0], "../") {
+				abs, err := filepath.Abs(parts[0])
+				if err == nil {
+					parts[0] = abs
+					binds = append(binds, strings.Join(parts, ":"))
+					continue
+				}
+			}
+		}
+		binds = append(binds, v)
+	}
+
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
-		Binds:        desired.Volumes,
+		Binds:        binds,
 	}
 	if len(desired.Networks) > 0 {
 		hostConfig.NetworkMode = container.NetworkMode(desired.Networks[0])
 	}
-	// ...
-	type ContainerConfig struct {
-		Image    string            `json:"image"`
-		Name     string            `json:"name"`
-		Command  []string          `json:"command"`
-		Ports    map[string]int    `json:"ports"`
-		Env      map[string]string `json:"env"`
-		Networks []string          `json:"networks"`
-		Volumes  []string          `json:"volumes"`
+
+	if desired.Restart != "" {
+		hostConfig.RestartPolicy = container.RestartPolicy{
+			Name: container.RestartPolicyMode(desired.Restart),
+		}
+	}
+
+	if desired.Logging != nil {
+		hostConfig.LogConfig = container.LogConfig{
+			Type:   desired.Logging.Driver,
+			Config: desired.Logging.Options,
+		}
+	}
+
+	// Mount secrets
+	for _, secret := range desired.Secrets {
+		absPath, err := filepath.Abs(secret.File)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve secret file path: %w", err)
+		}
+		hostConfig.Binds = append(hostConfig.Binds, fmt.Sprintf("%s:%s:ro", absPath, secret.Target))
+	}
+
+	config := &container.Config{
+		Image:      desired.Image,
+		Cmd:        desired.Command,
+		Env:        mapToEnvList(desired.Env),
+		Labels:     desired.Labels,
+		WorkingDir: desired.WorkingDir,
+		User:       desired.User,
+	}
+
+	if desired.Healthcheck != nil {
+		test := desired.Healthcheck.Test
+		if len(test) == 0 {
+			test = []string{"NONE"}
+		}
+
+		interval, _ := time.ParseDuration(desired.Healthcheck.Interval)
+		timeout, _ := time.ParseDuration(desired.Healthcheck.Timeout)
+		startPeriod, _ := time.ParseDuration(desired.Healthcheck.StartPeriod)
+
+		config.Healthcheck = &container.HealthConfig{
+			Test:        test,
+			Interval:    interval,
+			Timeout:     timeout,
+			StartPeriod: startPeriod,
+			Retries:     desired.Healthcheck.Retries,
+		}
 	}
 
 	resp, err := p.client.ContainerCreate(ctx,
-		&container.Config{
-			Image: desired.Image,
-			Cmd:   desired.Command,
-			Env:   mapToEnvList(desired.Env),
-		},
+		config,
 		hostConfig,
 		&network.NetworkingConfig{},
 		&v1.Platform{},
@@ -292,7 +347,9 @@ func (p *Provider) applyNetwork(ctx context.Context, req *pb.ApplyRequest) (*pb.
 	}
 
 	resp, err := p.client.NetworkCreate(ctx, desired.Name, types.NetworkCreate{
-		Driver: desired.Driver,
+		Driver:   desired.Driver,
+		Internal: desired.Internal,
+		Labels:   desired.Labels,
 		// CheckDuplicate removed in newer SDK
 	})
 	if err != nil {
@@ -356,13 +413,39 @@ func mapToEnvList(m map[string]string) []string {
 }
 
 type ContainerConfig struct {
-	Image    string            `json:"image"`
-	Name     string            `json:"name"`
-	Command  []string          `json:"command"`
-	Ports    map[string]int    `json:"ports"`
-	Env      map[string]string `json:"env"`
-	Networks []string          `json:"networks"`
-	Volumes  []string          `json:"volumes"`
+	Image       string             `json:"image"`
+	Name        string             `json:"name"`
+	Command     []string           `json:"command"`
+	Ports       map[string]int     `json:"ports"`
+	Env         map[string]string  `json:"env"`
+	Networks    []string           `json:"networks"`
+	Volumes     []string           `json:"volumes"`
+	Labels      map[string]string  `json:"labels"`
+	WorkingDir  string             `json:"workingDir"`
+	User        string             `json:"user"`
+	Restart     string             `json:"restart"`
+	Healthcheck *HealthcheckConfig `json:"healthcheck"`
+	Logging     *LoggingConfig     `json:"logging"`
+	Secrets     []SecretConfig     `json:"secrets"`
+}
+
+type HealthcheckConfig struct {
+	Test        []string `json:"test"`
+	Interval    string   `json:"interval"`
+	Timeout     string   `json:"timeout"`
+	StartPeriod string   `json:"startPeriod"`
+	Retries     int      `json:"retries"`
+}
+
+type LoggingConfig struct {
+	Driver  string            `json:"driver"`
+	Options map[string]string `json:"options"`
+}
+
+type SecretConfig struct {
+	Source string `json:"source"`
+	Target string `json:"target"`
+	File   string `json:"file"`
 }
 
 type ContainerState struct {
@@ -372,9 +455,11 @@ type ContainerState struct {
 }
 
 type NetworkConfig struct {
-	Name           string `json:"name"`
-	Driver         string `json:"driver"`
-	CheckDuplicate bool   `json:"checkDuplicate"`
+	Name           string            `json:"name"`
+	Driver         string            `json:"driver"`
+	CheckDuplicate bool              `json:"checkDuplicate"`
+	Internal       bool              `json:"internal"`
+	Labels         map[string]string `json:"labels"`
 }
 
 type NetworkState struct {

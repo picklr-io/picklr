@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "resolvedDependencies": {
+    "package://github.com/satishbabariya/picklr/pkg/schemas@0": {
+      "type": "local",
+      "uri": "projectpackage://github.com/satishbabariya/picklr/pkg/schemas@0.0.1",
+      "path": "../../pkg/schemas"
+    }
+  }
+}

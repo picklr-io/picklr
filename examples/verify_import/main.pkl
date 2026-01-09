@@ -1,0 +1,10 @@
+import "@pklr/docker/Container.pkl"
+
+res = new Container.Container {
+  name = "my-container"
+  image = "nginx"
+}
+
+output {
+  value = res
+}

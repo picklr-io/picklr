@@ -1,0 +1,27 @@
+module picklr.docker.Image
+
+import "../core/Resource.pkl" as Core
+
+class Image extends Core.Resource {
+  provider = "docker"
+  type = "docker_image"
+
+  /// Name/Tag of the image (e.g. "my-app:v1")
+  name: String
+
+  /// Path to build context (directory containing Dockerfile)
+  buildContext: String?
+
+  /// Dockerfile name (defaults to "Dockerfile")
+  dockerfile: String = "Dockerfile"
+  
+  /// Force pull/build
+  force: Boolean = false
+
+  properties = new {
+    ["name"] = name
+    ["buildContext"] = buildContext
+    ["dockerfile"] = dockerfile
+    ["force"] = force
+  }
+}

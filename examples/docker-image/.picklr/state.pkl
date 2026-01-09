@@ -1,0 +1,19 @@
+// Picklr state file
+amends "../../pkg/schemas/core/State.pkl"
+
+version = 1
+serial = 2
+lineage = ""
+
+outputs = new {}
+
+resources {
+  new {
+    type = "docker_image"
+    name = "picklr-custom:v1"
+    provider = "docker"
+    inputs = new {}
+    inputsHash = ""
+    outputs = new {}
+  }
+}

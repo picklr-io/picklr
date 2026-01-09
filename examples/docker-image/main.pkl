@@ -1,0 +1,10 @@
+amends "../../pkg/schemas/core/Config.pkl"
+import "../../pkg/schemas/docker/Image.pkl"
+
+resources {
+  new Image.Image {
+    name = "picklr-custom:v1"
+    buildContext = "."
+    dockerfile = "Dockerfile"
+  }
+}

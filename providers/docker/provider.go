@@ -9,9 +9,11 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	pb "github.com/picklr-io/picklr/pkg/proto/provider"
@@ -103,9 +105,80 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyNetwork(ctx, req)
 	case "docker_volume":
 		return p.applyVolume(ctx, req)
+	case "docker_image":
+		return p.applyImage(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)
+}
+
+func (p *Provider) applyImage(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	// DELETE
+	if req.DesiredConfigJson == nil {
+		var prior ImageState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior state: %w", err)
+		}
+		if prior.ID != "" {
+			_, err := p.client.ImageRemove(ctx, prior.ID, image.RemoveOptions{Force: true})
+			if err != nil {
+				if !client.IsErrNotFound(err) {
+					return nil, fmt.Errorf("failed to remove image: %w", err)
+				}
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired ImageConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired config: %w", err)
+	}
+
+	// BUILD
+	if desired.BuildContext != "" {
+		tar, err := archive.TarWithOptions(desired.BuildContext, &archive.TarOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create build context tar: %w", err)
+		}
+
+		opts := types.ImageBuildOptions{
+			Tags:       []string{desired.Name},
+			Dockerfile: desired.Dockerfile,
+			Remove:     true,
+		}
+
+		resp, err := p.client.ImageBuild(ctx, tar, opts)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build image: %w", err)
+		}
+		defer resp.Body.Close()
+
+		// Drain output to prevent blocking
+		io.Copy(os.Stdout, resp.Body)
+	} else {
+		// PULL only
+		reader, err := p.client.ImagePull(ctx, desired.Name, image.PullOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to pull image: %w", err)
+		}
+		io.Copy(os.Stdout, reader)
+		reader.Close()
+	}
+
+	// Inspect to get ID
+	inspect, _, err := p.client.ImageInspectWithRaw(ctx, desired.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect built image: %w", err)
+	}
+
+	newState := ImageState{
+		ID:   inspect.ID,
+		Name: desired.Name,
+	}
+	stateJSON, _ := json.Marshal(newState)
+
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
 
 func (p *Provider) applyContainer(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
@@ -132,7 +205,7 @@ func (p *Provider) applyContainer(ctx context.Context, req *pb.ApplyRequest) (*p
 		return nil, fmt.Errorf("failed to unmarshal desired config: %w", err)
 	}
 
-	reader, err := p.client.ImagePull(ctx, desired.Image, types.ImagePullOptions{})
+	reader, err := p.client.ImagePull(ctx, desired.Image, image.PullOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to pull image %s: %w", desired.Image, err)
 	}
@@ -208,8 +281,8 @@ func (p *Provider) applyNetwork(ctx context.Context, req *pb.ApplyRequest) (*pb.
 	}
 
 	resp, err := p.client.NetworkCreate(ctx, desired.Name, types.NetworkCreate{
-		Driver:         desired.Driver,
-		CheckDuplicate: desired.CheckDuplicate,
+		Driver: desired.Driver,
+		// CheckDuplicate removed in newer SDK
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create network: %w", err)
@@ -306,4 +379,16 @@ type VolumeConfig struct {
 type VolumeState struct {
 	Name   string `json:"name"`
 	Driver string `json:"driver"`
+}
+
+type ImageConfig struct {
+	Name         string `json:"name"`
+	BuildContext string `json:"buildContext"`
+	Dockerfile   string `json:"dockerfile"`
+	Force        bool   `json:"force"`
+}
+
+type ImageState struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }

@@ -1,10 +1,12 @@
 amends "@pklr/Config.pkl"
 import "@pklr/Docker.pkl"
 
-resources {
-  new Docker.Image {
-    name = "picklr-custom:v1"
-    buildContext = "."
-    dockerfile = "Dockerfile"
+docker {
+  images {
+    ["picklr-custom"] {
+      name = "picklr-custom:v1"
+      buildContext = "."
+      dockerfile = "Dockerfile"
+    }
   }
 }

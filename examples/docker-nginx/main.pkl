@@ -1,12 +1,11 @@
 amends "@pklr/Config.pkl"
-import "@pklr/Docker.pkl"
-
-resources {
-  new Docker.Container {
-    name = "picklr-nginx"
-    image = "nginx:latest"
-    ports {
-      ["8080"] = 80
+docker {
+  containers {
+    ["picklr-nginx"] {
+      image = "nginx:latest"
+      ports {
+        ["8080"] = 80
+      }
     }
   }
 }

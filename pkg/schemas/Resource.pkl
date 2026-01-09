@@ -3,9 +3,6 @@ module picklr.Resource
 /// Base class for all Picklr resources.
 /// All provider resources must extend this class.
 abstract class Resource {
-  /// Unique name within the configuration
-  name: String
-
   /// Provider that manages this resource (e.g., "aws", "docker")
   provider: String
 

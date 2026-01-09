@@ -1,0 +1,186 @@
+amends "@pklr/Config.pkl"
+
+docker {
+  networks {
+    ["app-net"] {
+      driver = "bridge"
+    }
+  }
+
+  volumes {
+    ["postgres_data"] {}
+    ["redis_data"] {}
+    ["minio_data"] {}
+    ["prometheus_data"] {}
+    ["grafana_data"] {}
+  }
+
+  containers {
+    // ----------------------------------------------------------
+    // API GATEWAY / REVERSE PROXY
+    // ----------------------------------------------------------
+    ["traefik"] {
+      image = "traefik:v3.0"
+      command {
+        "--api.dashboard=true"
+        "--providers.docker=true"
+        "--providers.docker.exposedbydefault=false"
+        "--entrypoints.web.address=:80"
+      }
+      ports {
+        ["80"] = 80
+        ["8080"] = 8080
+      }
+      volumes {
+        "/var/run/docker.sock:/var/run/docker.sock:ro"
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // REST API (Node.js / Express)
+    // ----------------------------------------------------------
+    ["rest-api"] {
+      image = "node:20-alpine"
+      // working_dir/labels not yet in schema, using env/command for specific config
+      command { "sh"; "-c"; "npm install && node index.js" }
+      volumes {
+        "./services/rest-api:/app"
+      }
+      env {
+        ["PORT"] = "3000"
+        ["DATABASE_URL"] = "postgres://app:app@postgres:5432/app"
+        ["REDIS_URL"] = "redis://redis:6379"
+        ["S3_ENDPOINT"] = "http://minio:9000"
+        ["S3_ACCESS_KEY"] = "minioadmin"
+        ["S3_SECRET_KEY"] = "minioadmin"
+      }
+      // Note: Labels/WorkingDir support would need schema updates. 
+      // For now we map what we can.
+      dependsOn {
+        "postgres"
+        "redis"
+        "minio"
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // gRPC API (Go)
+    // ----------------------------------------------------------
+    ["grpc-api"] {
+      image = "golang:1.23-alpine"
+      command { "sh"; "-c"; "go mod tidy && go run main.go" }
+      volumes {
+        "./services/grpc-api:/app"
+      }
+      env {
+        ["GRPC_PORT"] = "50051"
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // WEBSOCKET API
+    // ----------------------------------------------------------
+    ["websocket-api"] {
+      image = "node:20-alpine"
+      command { "sh"; "-c"; "npm install && node ws.js" }
+      volumes {
+        "./services/websocket-api:/app"
+      }
+      env {
+        ["PORT"] = "4000"
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // POSTGRESQL
+    // ----------------------------------------------------------
+    ["postgres"] {
+      image = "postgres:16"
+      env {
+        ["POSTGRES_USER"] = "app"
+        ["POSTGRES_PASSWORD"] = "app"
+        ["POSTGRES_DB"] = "app"
+      }
+      volumes {
+        "postgres_data:/var/lib/postgresql/data"
+      }
+      ports {
+        ["5432"] = 5432
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // REDIS
+    // ----------------------------------------------------------
+    ["redis"] {
+      image = "redis:7"
+      command { "redis-server"; "--appendonly"; "yes" }
+      volumes {
+        "redis_data:/data"
+      }
+      ports {
+        ["6379"] = 6379
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // MINIO
+    // ----------------------------------------------------------
+    ["minio"] {
+      image = "minio/minio:latest"
+      command { "server"; "/data"; "--console-address"; ":9001" }
+      env {
+        ["MINIO_ROOT_USER"] = "minioadmin"
+        ["MINIO_ROOT_PASSWORD"] = "minioadmin"
+      }
+      volumes {
+        "minio_data:/data"
+      }
+      ports {
+        ["9000"] = 9000
+        ["9001"] = 9001
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // PROMETHEUS
+    // ----------------------------------------------------------
+    ["prometheus"] {
+      image = "prom/prometheus:latest"
+      volumes {
+        "./observability/prometheus.yml:/etc/prometheus/prometheus.yml"
+        "prometheus_data:/prometheus"
+      }
+      ports {
+        ["9090"] = 9090
+      }
+      networks { "app-net" }
+    }
+
+    // ----------------------------------------------------------
+    // GRAFANA
+    // ----------------------------------------------------------
+    ["grafana"] {
+      image = "grafana/grafana:latest"
+      env {
+        ["GF_SECURITY_ADMIN_USER"] = "admin"
+        ["GF_SECURITY_ADMIN_PASSWORD"] = "admin"
+      }
+      volumes {
+        "grafana_data:/var/lib/grafana"
+      }
+      ports {
+        ["3001"] = 3000
+      }
+      dependsOn { "prometheus" }
+      networks { "app-net" }
+    }
+  }
+}

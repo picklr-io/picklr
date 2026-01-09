@@ -1,27 +1,26 @@
 amends "@pklr/Config.pkl"
 import "@pklr/Docker.pkl"
 
-resources {
-  local net = new Docker.Network {
-    name = "picklr-net"
-    driver = "bridge"
+docker {
+  networks {
+    ["picklr-net"] {
+      driver = "bridge"
+    }
   }
 
-  net
-
-  new Docker.Volume {
-    name = "picklr-vol"
+  volumes {
+    ["picklr-vol"] {}
   }
 
-  new Docker.Container {
-    name = "picklr-app"
-    image = "nginx:latest"
-    ports {
-      ["8081"] = 80
+  containers {
+    ["picklr-app"] {
+      image = "nginx:latest"
+      ports {
+        ["8081"] = 80
+      }
+      networks {
+        "picklr-net"
+      }
     }
-    networks {
-      net.name
-    }
-    // volumes { ... } // Not yet implemented in schema/provider, but network is.
   }
 }

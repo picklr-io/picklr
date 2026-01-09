@@ -1,14 +1,14 @@
 module picklr.Config
 
+import "docker/Docker.pkl"
 import "Resource.pkl"
 
 /// Provider configurations.
-/// Keys are provider names (e.g., "aws"), values are provider-specific config objects.
-providers: Mapping<String, Dynamic> = new {}
+/// Docker provider configuration
+docker: Docker.Config?
 
-/// All resources to manage.
-/// This list contains all resources defined in the configuration.
-resources: Listing<Resource.Resource> = new {}
+// Future providers...
+// aws: AWS.Config?
 
 /// Output values to expose.
 outputs: Mapping<String, Any>?

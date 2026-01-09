@@ -1,19 +1,18 @@
 amends "@pklr/Config.pkl"
 import "@pklr/Docker.pkl"
 
-resources {
-  local vol = new Docker.Volume {
-    name = "picklr-data"
+docker {
+  volumes {
+    ["picklr-data"] {}
   }
 
-  vol
-
-  new Docker.Container {
-    name = "picklr-db"
-    image = "alpine:latest"
-    command { "tail"; "-f"; "/dev/null" } // Keep running
-    volumes {
-      "\(vol.name):/data"
+  containers {
+    ["picklr-db"] {
+      image = "alpine:latest"
+      command { "tail"; "-f"; "/dev/null" }
+      volumes {
+        "picklr-data:/data"
+      }
     }
   }
 }

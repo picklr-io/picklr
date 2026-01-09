@@ -9,9 +9,6 @@ class Container extends Core.Resource {
   /// The ID of the image to run.
   image: String
 
-  /// The name of the container.
-  name: String
-
   /// The command to run in the container.
   command: Listing<String>?
 
@@ -26,7 +23,7 @@ class Container extends Core.Resource {
 
   properties = new {
     ["image"] = image
-    ["name"] = name
+
     ["command"] = command
     ["ports"] = ports
     ["env"] = env

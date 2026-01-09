@@ -1,0 +1,18 @@
+module picklr.docker.Docker
+
+import "Container.pkl" as ContainerModule
+import "Image.pkl" as ImageModule
+import "Network.pkl" as NetworkModule
+import "Volume.pkl" as VolumeModule
+
+class Config {
+  containers: Mapping<String, ContainerModule.Container> = new {}
+  networks: Mapping<String, NetworkModule.Network> = new {}
+  volumes: Mapping<String, VolumeModule.Volume> = new {}
+  images: Mapping<String, ImageModule.Image> = new {}
+}
+
+typealias Container = ContainerModule.Container
+typealias Network = NetworkModule.Network
+typealias Volume = VolumeModule.Volume
+typealias Image = ImageModule.Image

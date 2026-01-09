@@ -1,0 +1,5 @@
+amends "pkl:Project"
+
+dependencies {
+  ["pklr"] = import("../../pkg/schemas/PklProject")
+}

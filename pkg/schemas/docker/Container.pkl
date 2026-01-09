@@ -31,5 +31,9 @@ class Container extends Core.Resource {
     ["ports"] = ports
     ["env"] = env
     ["networks"] = networks
+    ["volumes"] = volumes
   }
+
+  /// Volumes to mount. Format: "volume_name:/target/path" or "/host/path:/container/path"
+  volumes: Listing<String>?
 }

@@ -225,9 +225,20 @@ func (p *Provider) applyContainer(ctx context.Context, req *pb.ApplyRequest) (*p
 
 	hostConfig := &container.HostConfig{
 		PortBindings: portBindings,
+		Binds:        desired.Volumes,
 	}
 	if len(desired.Networks) > 0 {
 		hostConfig.NetworkMode = container.NetworkMode(desired.Networks[0])
+	}
+	// ...
+	type ContainerConfig struct {
+		Image    string            `json:"image"`
+		Name     string            `json:"name"`
+		Command  []string          `json:"command"`
+		Ports    map[string]int    `json:"ports"`
+		Env      map[string]string `json:"env"`
+		Networks []string          `json:"networks"`
+		Volumes  []string          `json:"volumes"`
 	}
 
 	resp, err := p.client.ContainerCreate(ctx,
@@ -351,6 +362,7 @@ type ContainerConfig struct {
 	Ports    map[string]int    `json:"ports"`
 	Env      map[string]string `json:"env"`
 	Networks []string          `json:"networks"`
+	Volumes  []string          `json:"volumes"`
 }
 
 type ContainerState struct {

@@ -1,0 +1,27 @@
+// Picklr state file
+amends "../../pkg/schemas/core/State.pkl"
+
+version = 1
+serial = 2
+lineage = ""
+
+outputs = new {}
+
+resources {
+  new {
+    type = "docker_volume"
+    name = "picklr-data"
+    provider = "docker"
+    inputs = new {}
+    inputsHash = ""
+    outputs = new {}
+  }
+  new {
+    type = "docker_container"
+    name = "picklr-db"
+    provider = "docker"
+    inputs = new {}
+    inputsHash = ""
+    outputs = new {}
+  }
+}

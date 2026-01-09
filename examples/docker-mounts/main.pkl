@@ -1,0 +1,20 @@
+amends "../../pkg/schemas/core/Config.pkl"
+import "../../pkg/schemas/docker/Volume.pkl"
+import "../../pkg/schemas/docker/Container.pkl"
+
+resources {
+  local vol = new Volume.Volume {
+    name = "picklr-data"
+  }
+  
+  vol
+
+  new Container.Container {
+    name = "picklr-db"
+    image = "alpine:latest"
+    command { "tail"; "-f"; "/dev/null" } // Keep running
+    volumes {
+      "\(vol.name):/data"
+    }
+  }
+}

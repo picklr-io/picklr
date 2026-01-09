@@ -1,0 +1,100 @@
+syntax = "proto3";
+package picklr.provider;
+
+option go_package = "github.com/picklr-io/picklr/pkg/proto/provider";
+
+// Provider service defines the interface that all Picklr providers must implement.
+service Provider {
+  // Schema discovery
+  rpc GetSchema(GetSchemaRequest) returns (GetSchemaResponse);
+  
+  // Configuration
+  rpc Configure(ConfigureRequest) returns (ConfigureResponse);
+  
+  // Resource lifecycle
+  rpc Plan(PlanRequest) returns (PlanResponse);
+  rpc Apply(ApplyRequest) returns (ApplyResponse);
+  rpc Read(ReadRequest) returns (ReadResponse);
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+}
+
+message GetSchemaRequest {}
+
+message GetSchemaResponse {
+  // Helper to return the PKL schema definition for the provider
+  string pkl_schema = 1; 
+  string pkl_version = 2;
+}
+
+message ConfigureRequest {
+  bytes config_json = 1;
+}
+
+message ConfigureResponse {
+  repeated Diagnostic diagnostics = 1;
+}
+
+message PlanRequest {
+  string type = 1;
+  string name = 2;
+  bytes desired_config_json = 3;
+  bytes prior_state_json = 4;
+}
+
+message PlanResponse {
+  enum Action {
+    NOOP = 0;
+    CREATE = 1;
+    UPDATE = 2;
+    DELETE = 3;
+    REPLACE = 4;
+  }
+  Action action = 1;
+  repeated string changed_attributes = 2;
+  bytes planned_state_json = 3;
+  repeated Diagnostic diagnostics = 4;
+}
+
+message ApplyRequest {
+  string type = 1;
+  string name = 2;
+  bytes desired_config_json = 3;
+  bytes prior_state_json = 4;
+}
+
+message ApplyResponse {
+  bytes new_state_json = 1;
+  repeated Diagnostic diagnostics = 2;
+}
+
+message ReadRequest {
+  string type = 1;
+  string id = 2;
+  bytes current_state_json = 3;
+}
+
+message ReadResponse {
+  bytes new_state_json = 1;
+  bool exists = 2;
+  repeated Diagnostic diagnostics = 3;
+}
+
+message DeleteRequest {
+  string type = 1;
+  string id = 2;
+  bytes current_state_json = 3;
+}
+
+message DeleteResponse {
+  repeated Diagnostic diagnostics = 1;
+}
+
+message Diagnostic {
+  enum Severity {
+    ERROR = 0;
+    WARNING = 1;
+  }
+  Severity severity = 1;
+  string summary = 2;
+  string detail = 3;
+}

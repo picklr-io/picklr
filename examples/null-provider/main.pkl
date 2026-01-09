@@ -1,0 +1,11 @@
+amends "../../pkg/schemas/core/Config.pkl"
+import "../../pkg/schemas/null/Resource.pkl"
+
+resources {
+  new Resource.Resource {
+    name = "my-test-resource"
+    triggers {
+      ["version"] = "1.0"
+    }
+  }
+}

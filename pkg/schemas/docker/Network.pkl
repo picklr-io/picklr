@@ -1,0 +1,23 @@
+module picklr.docker.Network
+
+import "../core/Resource.pkl" as Core
+
+class Network extends Core.Resource {
+  provider = "docker"
+  type = "docker_network"
+
+  /// The name of the network.
+  name: String
+
+  /// The driver to use (e.g., "bridge", "overlay").
+  driver: String = "bridge"
+  
+  /// Check for duplicate networks
+  checkDuplicate: Boolean = true
+
+  properties = new {
+    ["name"] = name
+    ["driver"] = driver
+    ["checkDuplicate"] = checkDuplicate
+  }
+}

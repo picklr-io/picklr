@@ -1,0 +1,37 @@
+module picklr.core.State
+
+/// Represents the persistent state of the infrastructure.
+class State {
+  version: Int = 1
+  serial: Int
+  lineage: String
+  resources: Listing<ResourceState> = new {}
+  outputs: Mapping<String, OutputValue>?
+}
+
+/// The state of a single managed resource.
+class ResourceState {
+  /// The resource type (e.g., "aws.s3.Bucket")
+  type: String
+  
+  /// The logical name in the config
+  name: String
+  
+  /// The provider name
+  provider: String
+  
+  /// User-provided inputs (what was declared)
+  inputs: Dynamic
+  inputsHash: String
+  
+  /// Provider-returned outputs (what was created: IDs, ARNs, etc.)
+  outputs: Dynamic
+  
+  /// Dependencies for destroy ordering
+  dependencies: Listing<String>?
+}
+
+class OutputValue {
+  value: Dynamic
+  sensitive: Boolean = false
+}

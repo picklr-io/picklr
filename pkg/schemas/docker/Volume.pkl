@@ -1,0 +1,19 @@
+module picklr.docker.Volume
+
+import "../core/Resource.pkl" as Core
+
+class Volume extends Core.Resource {
+  provider = "docker"
+  type = "docker_volume"
+
+  /// The name of the volume.
+  name: String
+
+  /// The driver to use (e.g., "local").
+  driver: String = "local"
+
+  properties = new {
+    ["name"] = name
+    ["driver"] = driver
+  }
+}

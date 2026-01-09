@@ -1,0 +1,17 @@
+// Picklr state file
+amends "package://pkg.pkl-lang.org/pkl-pantry/packages/picklr/core/State.pkl"
+
+version = 1
+serial = 2
+lineage = ""
+
+resources {
+  new {
+    type = ""
+    name = "my-test-resource"
+    provider = "null"
+    inputs = new {}
+    inputsHash = ""
+    outputs = new {}
+  }
+}

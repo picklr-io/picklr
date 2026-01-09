@@ -1,0 +1,309 @@
+package docker
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"os"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
+	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+	pb "github.com/picklr-io/picklr/pkg/proto/provider"
+)
+
+type Provider struct {
+	pb.UnimplementedProviderServer
+	client *client.Client
+}
+
+func New() *Provider {
+	return &Provider{}
+}
+
+func (p *Provider) ensureClient() error {
+	if p.client != nil {
+		return nil
+	}
+	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		return err
+	}
+	p.client = cli
+	return nil
+}
+
+func (p *Provider) Configure(ctx context.Context, req *pb.ConfigureRequest) (*pb.ConfigureResponse, error) {
+	if err := p.ensureClient(); err != nil {
+		return &pb.ConfigureResponse{
+			Diagnostics: []*pb.Diagnostic{
+				{
+					Severity: pb.Diagnostic_ERROR,
+					Summary:  "Failed to create Docker client",
+					Detail:   err.Error(),
+				},
+			},
+		}, nil
+	}
+	return &pb.ConfigureResponse{}, nil
+}
+
+func (p *Provider) Plan(ctx context.Context, req *pb.PlanRequest) (*pb.PlanResponse, error) {
+	if req.DesiredConfigJson == nil && req.PriorStateJson != nil {
+		return &pb.PlanResponse{Action: pb.PlanResponse_DELETE}, nil
+	}
+
+	if req.PriorStateJson == nil {
+		return &pb.PlanResponse{Action: pb.PlanResponse_CREATE}, nil
+	}
+
+	switch req.Type {
+	case "docker_container":
+		var desired ContainerConfig
+		if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+		}
+
+		var prior ContainerState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior: %w", err)
+		}
+
+		if desired.Image != prior.ImageName {
+			return &pb.PlanResponse{
+				Action:            pb.PlanResponse_REPLACE,
+				ChangedAttributes: []string{"image"},
+			}, nil
+		}
+		return &pb.PlanResponse{Action: pb.PlanResponse_NOOP}, nil
+
+	case "docker_network":
+		return &pb.PlanResponse{Action: pb.PlanResponse_NOOP}, nil
+	case "docker_volume":
+		return &pb.PlanResponse{Action: pb.PlanResponse_NOOP}, nil
+	}
+
+	return &pb.PlanResponse{Action: pb.PlanResponse_NOOP}, nil
+}
+
+func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if err := p.ensureClient(); err != nil {
+		return nil, err
+	}
+
+	switch req.Type {
+	case "docker_container":
+		return p.applyContainer(ctx, req)
+	case "docker_network":
+		return p.applyNetwork(ctx, req)
+	case "docker_volume":
+		return p.applyVolume(ctx, req)
+	}
+
+	return nil, fmt.Errorf("unknown resource type: %s", req.Type)
+}
+
+func (p *Provider) applyContainer(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil { // Deletion
+		var prior ContainerState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior state: %w", err)
+		}
+
+		if prior.ID != "" {
+			timeout := 10 // seconds
+			_ = p.client.ContainerStop(ctx, prior.ID, container.StopOptions{Timeout: &timeout})
+			if err := p.client.ContainerRemove(ctx, prior.ID, container.RemoveOptions{Force: true}); err != nil {
+				if !client.IsErrNotFound(err) {
+					return nil, fmt.Errorf("failed to remove container: %w", err)
+				}
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired ContainerConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired config: %w", err)
+	}
+
+	reader, err := p.client.ImagePull(ctx, desired.Image, types.ImagePullOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to pull image %s: %w", desired.Image, err)
+	}
+	io.Copy(os.Stdout, reader)
+	reader.Close()
+
+	portBindings := nat.PortMap{}
+	for hostPort, containerPort := range desired.Ports {
+		p := nat.Port(fmt.Sprintf("%d/tcp", containerPort))
+		portBindings[p] = []nat.PortBinding{
+			{
+				HostIP:   "0.0.0.0",
+				HostPort: hostPort,
+			},
+		}
+	}
+
+	hostConfig := &container.HostConfig{
+		PortBindings: portBindings,
+	}
+	if len(desired.Networks) > 0 {
+		hostConfig.NetworkMode = container.NetworkMode(desired.Networks[0])
+	}
+
+	resp, err := p.client.ContainerCreate(ctx,
+		&container.Config{
+			Image: desired.Image,
+			Cmd:   desired.Command,
+			Env:   mapToEnvList(desired.Env),
+		},
+		hostConfig,
+		&network.NetworkingConfig{},
+		&v1.Platform{},
+		desired.Name,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create container: %w", err)
+	}
+
+	if err := p.client.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return nil, fmt.Errorf("failed to start container: %w", err)
+	}
+
+	newState := ContainerState{
+		ID:        resp.ID,
+		Name:      desired.Name,
+		ImageName: desired.Image,
+	}
+	stateJSON, _ := json.Marshal(newState)
+
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
+
+func (p *Provider) applyNetwork(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior NetworkState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior state: %w", err)
+		}
+		if prior.ID != "" {
+			if err := p.client.NetworkRemove(ctx, prior.ID); err != nil {
+				if !client.IsErrNotFound(err) {
+					return nil, fmt.Errorf("failed to remove network: %w", err)
+				}
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired NetworkConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired config: %w", err)
+	}
+
+	resp, err := p.client.NetworkCreate(ctx, desired.Name, types.NetworkCreate{
+		Driver:         desired.Driver,
+		CheckDuplicate: desired.CheckDuplicate,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create network: %w", err)
+	}
+
+	newState := NetworkState{
+		ID:     resp.ID,
+		Name:   desired.Name,
+		Driver: desired.Driver,
+	}
+	stateJSON, _ := json.Marshal(newState)
+
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
+
+func (p *Provider) applyVolume(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior VolumeState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior state: %w", err)
+		}
+		if prior.Name != "" {
+			if err := p.client.VolumeRemove(ctx, prior.Name, true); err != nil {
+				if !client.IsErrNotFound(err) {
+					return nil, fmt.Errorf("failed to remove volume: %w", err)
+				}
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired VolumeConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired config: %w", err)
+	}
+
+	vol, err := p.client.VolumeCreate(ctx, volume.CreateOptions{
+		Name:   desired.Name,
+		Driver: desired.Driver,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create volume: %w", err)
+	}
+
+	newState := VolumeState{
+		Name:   vol.Name,
+		Driver: vol.Driver,
+	}
+	stateJSON, _ := json.Marshal(newState)
+
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
+
+func mapToEnvList(m map[string]string) []string {
+	var env []string
+	for k, v := range m {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
+	return env
+}
+
+type ContainerConfig struct {
+	Image    string            `json:"image"`
+	Name     string            `json:"name"`
+	Command  []string          `json:"command"`
+	Ports    map[string]int    `json:"ports"`
+	Env      map[string]string `json:"env"`
+	Networks []string          `json:"networks"`
+}
+
+type ContainerState struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	ImageName string `json:"image"`
+}
+
+type NetworkConfig struct {
+	Name           string `json:"name"`
+	Driver         string `json:"driver"`
+	CheckDuplicate bool   `json:"checkDuplicate"`
+}
+
+type NetworkState struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Driver string `json:"driver"`
+}
+
+type VolumeConfig struct {
+	Name   string `json:"name"`
+	Driver string `json:"driver"`
+}
+
+type VolumeState struct {
+	Name   string `json:"name"`
+	Driver string `json:"driver"`
+}

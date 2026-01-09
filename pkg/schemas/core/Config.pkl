@@ -1,0 +1,14 @@
+module picklr.core.Config
+
+import "Resource.pkl"
+
+/// Provider configurations.
+/// Keys are provider names (e.g., "aws"), values are provider-specific config objects.
+providers: Mapping<String, Dynamic> = new {}
+
+/// All resources to manage.
+/// This list contains all resources defined in the configuration.
+resources: Listing<Resource.Resource> = new {}
+
+/// Output values to expose.
+outputs: Mapping<String, Any>?

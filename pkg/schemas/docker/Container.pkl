@@ -1,0 +1,35 @@
+module picklr.docker.Container
+
+import "../core/Resource.pkl" as Core
+
+class Container extends Core.Resource {
+  provider = "docker"
+  type = "docker_container"
+
+  /// The ID of the image to run.
+  image: String
+
+  /// The name of the container.
+  name: String
+
+  /// The command to run in the container.
+  command: Listing<String>?
+
+  /// Port mappings (Host -> Container).
+  ports: Mapping<String, Int>?
+
+  /// Environment variables.
+  env: Mapping<String, String>?
+
+  /// Networks to attract to
+  networks: Listing<String>?
+
+  properties = new {
+    ["image"] = image
+    ["name"] = name
+    ["command"] = command
+    ["ports"] = ports
+    ["env"] = env
+    ["networks"] = networks
+  }
+}

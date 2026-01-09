@@ -1,0 +1,13 @@
+// Picklr state file
+amends "../../pkg/schemas/core/State.pkl"
+
+version = 1
+serial = 2
+lineage = ""
+
+outputs {
+  ["result"] = "I am happy"
+}
+
+resources {
+}

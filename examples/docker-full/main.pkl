@@ -1,0 +1,29 @@
+amends "../../pkg/schemas/core/Config.pkl"
+import "../../pkg/schemas/docker/Container.pkl"
+import "../../pkg/schemas/docker/Network.pkl"
+import "../../pkg/schemas/docker/Volume.pkl"
+
+resources {
+  local net = new Network.Network {
+    name = "picklr-net"
+    driver = "bridge"
+  }
+  
+  net
+
+  new Volume.Volume {
+    name = "picklr-vol"
+  }
+
+  new Container.Container {
+    name = "picklr-app"
+    image = "nginx:latest"
+    ports {
+      ["8081"] = 80
+    }
+    networks {
+      net.name
+    }
+    // volumes { ... } // Not yet implemented in schema/provider, but network is.
+  }
+}

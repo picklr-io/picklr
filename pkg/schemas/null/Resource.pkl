@@ -1,0 +1,15 @@
+module picklr.`null`.Resource
+
+import "../core/Resource.pkl" as Core
+
+/// A resource that fails or succeeds based on triggers, useful for testing.
+class Resource extends Core.Resource {
+  provider = "null"
+
+  /// A mapping of arbitrary triggers. Changing these will force a replacement.
+  triggers: Mapping<String, String>?
+
+  properties = new {
+    ["triggers"] = triggers
+  }
+}

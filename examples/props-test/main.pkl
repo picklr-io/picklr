@@ -1,0 +1,7 @@
+amends "../../pkg/schemas/core/Config.pkl"
+
+outputs {
+  ["result"] = "I am \(read("prop:mood"))"
+}
+
+resources {}

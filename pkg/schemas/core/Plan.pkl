@@ -1,0 +1,50 @@
+module picklr.core.Plan
+
+import "Resource.pkl"
+
+/// Represents a planned execution.
+class Plan {
+  metadata: PlanMetadata
+  changes: Listing<ResourceChange>
+  summary: PlanSummary
+}
+
+class PlanMetadata {
+  timestamp: String
+  configHash: String
+  priorStateHash: String?
+}
+
+/// A planned change for a single resource.
+class ResourceChange {
+  /// The address of the resource (e.g., "aws.s3.Bucket.my-bucket")
+  address: String
+  
+  /// The action to be taken.
+  action: "create" | "update" | "delete" | "replace" | "noop"
+  
+  /// The desired state of the resource (for create/update).
+  resource: Resource?
+  
+  /// The prior state of the resource (for update/delete).
+  prior: Resource?
+  
+  /// Detailed diff of properties.
+  diff: Mapping<String, PropertyDiff>?
+}
+
+class PropertyDiff {
+  before: Dynamic?
+  after: Dynamic?
+  sensitive: Boolean = false
+  forcesReplacement: Boolean = false
+  action: "create" | "update" | "delete" | "noop"
+}
+
+class PlanSummary {
+  create: Int
+  update: Int
+  delete: Int
+  replace: Int
+  noop: Int
+}

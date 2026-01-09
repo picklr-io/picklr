@@ -1,0 +1,12 @@
+amends "../../pkg/schemas/core/Config.pkl"
+import "../../pkg/schemas/docker/Container.pkl"
+
+resources {
+  new Container.Container {
+    name = "picklr-nginx"
+    image = "nginx:latest"
+    ports {
+      ["8080"] = 80
+    }
+  }
+}

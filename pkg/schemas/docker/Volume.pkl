@@ -1,6 +1,6 @@
 module picklr.docker.Volume
 
-import "../core/Resource.pkl" as Core
+import "../Resource.pkl" as Core
 
 class Volume extends Core.Resource {
   provider = "docker"

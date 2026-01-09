@@ -1,6 +1,6 @@
-import "@pklr/docker/Container.pkl"
+import "@pklr/Docker.pkl"
 
-res = new Container.Container {
+res = new Docker.Container {
   name = "my-container"
   image = "nginx"
 }

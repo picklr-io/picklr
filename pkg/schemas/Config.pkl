@@ -1,4 +1,4 @@
-module picklr.core.Config
+module picklr.Config
 
 import "Resource.pkl"
 

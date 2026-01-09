@@ -1,4 +1,4 @@
-module picklr.core.State
+module picklr.State
 
 /// Represents the persistent state of the infrastructure.
 class State {
@@ -13,20 +13,20 @@ class State {
 class ResourceState {
   /// The resource type (e.g., "aws.s3.Bucket")
   type: String
-  
+
   /// The logical name in the config
   name: String
-  
+
   /// The provider name
   provider: String
-  
+
   /// User-provided inputs (what was declared)
   inputs: Dynamic
   inputsHash: String
-  
+
   /// Provider-returned outputs (what was created: IDs, ARNs, etc.)
   outputs: Dynamic
-  
+
   /// Dependencies for destroy ordering
   dependencies: Listing<String>?
 }

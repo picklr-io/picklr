@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "pklProjects": [
+    {
+      "projectFile": "pkg/schemas/PklProject",
+      "packageUri": "package://github.com/satishbabariya/picklr/pkg/schemas@0.0.1",
+      "declaredDependencies": {},
+      "resolvedDependencies": {},
+      "evaluatorSettings": {}
+    },
+    {
+      "projectFile": "examples/docker-full/PklProject",
+      "packageUri": null,
+      "declaredDependencies": {
+        "pklr": "package://github.com/satishbabariya/picklr/pkg/schemas@0.0.1"
+      },
+      "resolvedDependencies": {
+        "package://github.com/satishbabariya/picklr/pkg/schemas@0": {
+          "myType": "local",
+          "uri": "package://github.com/satishbabariya/picklr/pkg/schemas@0.0.1",
+          "path": "../../pkg/schemas"
+        }
+      },
+      "evaluatorSettings": {}
+    },
+    {
+      "projectFile": "examples/verify_import/PklProject",
+      "packageUri": null,
+      "declaredDependencies": {
+        "pklr": "package://github.com/satishbabariya/picklr/pkg/schemas@0.0.1"
+      },
+      "resolvedDependencies": {
+        "package://github.com/satishbabariya/picklr/pkg/schemas@0": {
+          "myType": "local",
+          "uri": "package://github.com/satishbabariya/picklr/pkg/schemas@0.0.1",
+          "path": "../../pkg/schemas"
+        }
+      },
+      "evaluatorSettings": {}
+    }
+  ]
+}

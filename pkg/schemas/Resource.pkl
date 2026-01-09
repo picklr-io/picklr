@@ -1,17 +1,17 @@
-module picklr.core.Resource
+module picklr.Resource
 
 /// Base class for all Picklr resources.
 /// All provider resources must extend this class.
 abstract class Resource {
   /// Unique name within the configuration
   name: String
-  
+
   /// Provider that manages this resource (e.g., "aws", "docker")
   provider: String
-  
+
   /// Lifecycle configuration
   lifecycle: Lifecycle?
-  
+
   /// Explicit dependencies on other resources
   dependsOn: Listing<String>?
 
@@ -23,10 +23,10 @@ abstract class Resource {
 class Lifecycle {
   /// Ensure the new resource is created before the old one is destroyed used for replacement.
   createBeforeDestroy: Boolean = false
-  
+
   /// Prevent the resource from being destroyed.
   preventDestroy: Boolean = false
-  
+
   /// List of attributes to ignore when checking for drift.
   ignoreChanges: Listing<String>?
 }

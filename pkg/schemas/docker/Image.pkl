@@ -1,6 +1,6 @@
 module picklr.docker.Image
 
-import "../core/Resource.pkl" as Core
+import "../Resource.pkl" as Core
 
 class Image extends Core.Resource {
   provider = "docker"
@@ -14,7 +14,7 @@ class Image extends Core.Resource {
 
   /// Dockerfile name (defaults to "Dockerfile")
   dockerfile: String = "Dockerfile"
-  
+
   /// Force pull/build
   force: Boolean = false
 

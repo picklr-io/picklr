@@ -1,8 +1,8 @@
-amends "../../pkg/schemas/core/Config.pkl"
-import "../../pkg/schemas/docker/Image.pkl"
+amends "@pklr/Config.pkl"
+import "@pklr/Docker.pkl"
 
 resources {
-  new Image.Image {
+  new Docker.Image {
     name = "picklr-custom:v1"
     buildContext = "."
     dockerfile = "Dockerfile"

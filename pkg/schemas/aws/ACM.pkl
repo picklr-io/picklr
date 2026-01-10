@@ -1,0 +1,45 @@
+module picklr.aws.ACM
+
+import "../Resource.pkl"
+
+/// An ACM Certificate.
+class Certificate extends Resource.Resource {
+  provider = "aws"
+
+  /// The fully qualified domain name (FQDN), such as www.example.com.
+  domainName: String
+
+  /// The validation method.
+  validationMethod: String = "DNS"
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["domain_name"] = domainName
+    ["validation_method"] = validationMethod
+    ["tags"] = tags
+  }
+}
+
+/// A Certificate Validation resource.
+/// This resource accepts a certificate ARN and waits for it to be validated.
+class CertificateValidation extends Resource.Resource {
+  provider = "aws"
+
+  /// The ARN of the certificate to validate.
+  certificateArn: String
+
+  /// List of FQDNs that implement the validation.
+  /// This is mostly a dummy dependency to force ordering if we were managing DNS records too.
+  validationRecordFqdns: Listing<String>?
+
+  properties = new {
+    ["certificate_arn"] = certificateArn
+    ["validation_record_fqdns"] =
+      if (validationRecordFqdns != null)
+        validationRecordFqdns!!.toList()
+      else
+        null
+  }
+}

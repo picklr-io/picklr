@@ -5,8 +5,13 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
+	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
+
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
+
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -20,30 +25,37 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/rds"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/secretsmanager"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
+
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	pb "github.com/picklr-io/picklr/pkg/proto/provider"
 )
 
 type Provider struct {
 	pb.UnimplementedProviderServer
-	s3Client             *s3.Client
-	ec2Client            *ec2.Client
-	iamClient            *iam.Client
-	lambdaClient         *lambda.Client
-	dynamodbClient       *dynamodb.Client
-	rdsClient            *rds.Client
-	sqsClient            *sqs.Client
-	snsClient            *sns.Client
-	ecrClient            *ecr.Client
-	ecsClient            *ecs.Client
-	elbv2Client          *elasticloadbalancingv2.Client
-	route53Client        *route53.Client
-	apigatewayClient     *apigateway.Client
-	cloudfrontClient     *cloudfront.Client
+	s3Client          *s3.Client
+	ec2Client         *ec2.Client
+	iamClient         *iam.Client
+	lambdaClient      *lambda.Client
+	dynamodbClient    *dynamodb.Client
+	rdsClient         *rds.Client
+	sqsClient         *sqs.Client
+	snsClient         *sns.Client
+	ecrClient         *ecr.Client
+	ecsClient         *ecs.Client
+	elbv2Client       *elasticloadbalancingv2.Client
+	route53Client     *route53.Client
+	apigatewayClient  *apigateway.Client
+	autoscalingClient *autoscaling.Client
+	acmClient         *acm.Client
+	cloudfrontClient  *cloudfront.Client
+	eventbridgeClient *eventbridge.Client
+
 	cloudwatchClient     *cloudwatch.Client
 	cloudwatchlogsClient *cloudwatchlogs.Client
 	kmsClient            *kms.Client
+	secretsmanagerClient *secretsmanager.Client
 }
 
 func New() *Provider {
@@ -51,7 +63,7 @@ func New() *Provider {
 }
 
 func (p *Provider) ensureClient(ctx context.Context, region string) error {
-	if p.s3Client != nil && p.ec2Client != nil && p.iamClient != nil && p.lambdaClient != nil && p.dynamodbClient != nil && p.rdsClient != nil && p.sqsClient != nil && p.snsClient != nil && p.ecrClient != nil && p.ecsClient != nil && p.elbv2Client != nil && p.route53Client != nil && p.apigatewayClient != nil && p.cloudfrontClient != nil && p.cloudwatchClient != nil && p.cloudwatchlogsClient != nil && p.kmsClient != nil {
+	if p.s3Client != nil && p.ec2Client != nil && p.iamClient != nil && p.lambdaClient != nil && p.dynamodbClient != nil && p.rdsClient != nil && p.sqsClient != nil && p.snsClient != nil && p.ecrClient != nil && p.ecsClient != nil && p.elbv2Client != nil && p.route53Client != nil && p.apigatewayClient != nil && p.cloudfrontClient != nil && p.cloudwatchClient != nil && p.cloudwatchlogsClient != nil && p.kmsClient != nil && p.secretsmanagerClient != nil {
 		return nil
 	}
 
@@ -73,10 +85,15 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.elbv2Client = elasticloadbalancingv2.NewFromConfig(cfg)
 	p.route53Client = route53.NewFromConfig(cfg)
 	p.apigatewayClient = apigateway.NewFromConfig(cfg)
+	p.autoscalingClient = autoscaling.NewFromConfig(cfg)
+	p.acmClient = acm.NewFromConfig(cfg)
 	p.cloudfrontClient = cloudfront.NewFromConfig(cfg)
+	p.eventbridgeClient = eventbridge.NewFromConfig(cfg)
+
 	p.cloudwatchClient = cloudwatch.NewFromConfig(cfg)
 	p.cloudwatchlogsClient = cloudwatchlogs.NewFromConfig(cfg)
 	p.kmsClient = kms.NewFromConfig(cfg)
+	p.secretsmanagerClient = secretsmanager.NewFromConfig(cfg)
 
 	return nil
 }
@@ -138,12 +155,28 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyBucket(ctx, req)
 	case "aws:EC2.Instance":
 		return p.applyInstance(ctx, req)
+	case "aws:EC2.KeyPair":
+		return p.applyKeyPair(ctx, req)
+	case "aws:EC2.LaunchTemplate":
+		return p.applyLaunchTemplate(ctx, req)
+	case "aws:AutoScaling.AutoScalingGroup":
+		return p.applyAutoScalingGroup(ctx, req)
+
 	case "aws:EC2.Vpc":
 		return p.applyVpc(ctx, req)
 	case "aws:EC2.Subnet":
 		return p.applySubnet(ctx, req)
 	case "aws:EC2.SecurityGroup":
 		return p.applySecurityGroup(ctx, req)
+	case "aws:EC2.InternetGateway":
+		return p.applyInternetGateway(ctx, req)
+	case "aws:EC2.ElasticIP":
+		return p.applyElasticIP(ctx, req)
+	case "aws:EC2.NatGateway":
+		return p.applyNatGateway(ctx, req)
+	case "aws:EC2.RouteTable":
+		return p.applyRouteTable(ctx, req)
+
 	case "aws:IAM.Role":
 		return p.applyRole(ctx, req)
 	case "aws:IAM.Policy":
@@ -197,6 +230,40 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyKey(ctx, req)
 	case "aws:KMS.Alias":
 		return p.applyAlias(ctx, req)
+	case "aws:SecretsManager.Secret":
+		return p.applySecret(ctx, req)
+	case "aws:SecretsManager.SecretVersion":
+		return p.applySecretVersion(ctx, req)
+	case "aws:ACM.Certificate":
+		return p.applyCertificate(ctx, req)
+	case "aws:ACM.CertificateValidation":
+		return p.applyCertificateValidation(ctx, req)
+	case "aws:EventBridge.EventBus":
+		return p.applyEventBus(ctx, req)
+	case "aws:EventBridge.Rule":
+		return p.applyRule(ctx, req)
+	case "aws:EventBridge.Target":
+		return p.applyTarget(ctx, req)
+	case "aws:IAM.InstanceProfile":
+		return p.applyInstanceProfile(ctx, req)
+	case "aws:S3.BucketPolicy":
+		return p.applyBucketPolicy(ctx, req)
+	case "aws:EC2.Volume":
+		return p.applyVolume(ctx, req)
+	case "aws:RDS.DBSubnetGroup":
+		return p.applyDBSubnetGroup(ctx, req)
+	case "aws:RDS.DBCluster":
+		return p.applyDBCluster(ctx, req)
+	case "aws:EC2.NetworkAcl":
+		return p.applyNetworkAcl(ctx, req)
+	case "aws:EC2.VpcPeeringConnection":
+		return p.applyVpcPeeringConnection(ctx, req)
+	case "aws:EC2.TransitGateway":
+		return p.applyTransitGateway(ctx, req)
+	case "aws:EC2.TransitGatewayAttachment":
+		return p.applyTransitGatewayAttachment(ctx, req)
+	case "aws:EC2.VpcEndpoint":
+		return p.applyVpcEndpoint(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)

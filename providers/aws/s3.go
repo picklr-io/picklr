@@ -131,3 +131,47 @@ func (p *Provider) applyBucket(ctx context.Context, req *pb.ApplyRequest) (*pb.A
 
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
+
+type BucketPolicyConfig struct {
+	Bucket string `json:"bucket"`
+	Policy string `json:"policy"`
+}
+
+type BucketPolicyState struct {
+	Bucket string `json:"bucket"`
+}
+
+func (p *Provider) applyBucketPolicy(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior BucketPolicyState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior: %w", err)
+		}
+		if prior.Bucket != "" {
+			_, err := p.s3Client.DeleteBucketPolicy(ctx, &s3.DeleteBucketPolicyInput{
+				Bucket: &prior.Bucket,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete bucket policy: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired BucketPolicyConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	_, err := p.s3Client.PutBucketPolicy(ctx, &s3.PutBucketPolicyInput{
+		Bucket: &desired.Bucket,
+		Policy: &desired.Policy,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to put bucket policy: %w", err)
+	}
+
+	newState := BucketPolicyState{Bucket: desired.Bucket}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}

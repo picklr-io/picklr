@@ -1,0 +1,124 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/EC2.pkl"
+import "../../pkg/schemas/aws/IAM.pkl"
+import "../../pkg/schemas/aws/RDS.pkl"
+import "../../pkg/schemas/aws/S3.pkl"
+
+// Variables for references
+local startVpc = new EC2.Vpc {
+  cidrBlock = "10.0.0.0/16"
+  tags = new Mapping { ["Name"] = "polish-vpc" }
+}
+
+local subnet1 = new EC2.Subnet {
+  vpcId = startVpc.output("id")
+  cidrBlock = "10.0.1.0/24"
+  availabilityZone = "us-east-1a"
+  tags = new Mapping { ["Name"] = "polish-subnet-1" }
+}
+
+local subnet2 = new EC2.Subnet {
+  vpcId = startVpc.output("id")
+  cidrBlock = "10.0.2.0/24"
+  availabilityZone = "us-east-1b"
+  tags = new Mapping { ["Name"] = "polish-subnet-2" }
+}
+
+local dbSubnetGroup = new RDS.DBSubnetGroup {
+  name = "polish-db-subnet-group"
+  subnetIds = new Listing {
+    subnet1.output("id")
+    subnet2.output("id")
+  }
+  tags = new Mapping { ["Name"] = "polish-db-subnet-group" }
+}
+
+aws {
+  region = "us-east-1"
+
+  // 1. IAM
+  roles = new Listing {
+    new IAM.Role {
+      name = "example-role-for-profile"
+      assumeRolePolicy =
+        """
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "ec2.amazonaws.com"
+              }
+            }
+          ]
+        }
+        """
+    }
+  }
+
+  instanceProfiles = new Listing {
+    new IAM.InstanceProfile {
+      name = "example-instance-profile"
+      role = "example-role-for-profile"
+    }
+  }
+
+  // 2. S3
+  buckets = new Listing {
+    new S3.Bucket {
+      bucket = "picklr-polish-bucket-123456"
+    }
+  }
+
+  bucketPolicies = new Listing {
+    new S3.BucketPolicy {
+      bucket = "picklr-polish-bucket-123456"
+      policy =
+        """
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AddPerm",
+              "Effect": "Allow",
+              "Principal": "*",
+              "Action": "s3:GetObject",
+              "Resource": "arn:aws:s3:::picklr-polish-bucket-123456/*"
+            }
+          ]
+        }
+        """
+    }
+  }
+
+  // 3. EC2 Volume
+  volumes = new Listing {
+    new EC2.Volume {
+      availabilityZone = "us-east-1a"
+      size = 10
+      tags = new Mapping {
+        ["Name"] = "picklr-volume"
+      }
+    }
+  }
+
+  // 4. Connect variables
+  vpcs = new Listing { startVpc }
+  subnets = new Listing { subnet1; subnet2 }
+  dbSubnetGroups = new Listing { dbSubnetGroup }
+
+  dbClusters = new Listing {
+    new RDS.DBCluster {
+      identifier = "polish-aurora-cluster"
+      engine = "aurora-postgresql"
+      masterUsername = "picklruser"
+      masterUserPassword = "picklrpassword123"
+      databaseName = "picklrdb"
+      dbSubnetGroupName = dbSubnetGroup.name
+      tags = new Mapping { ["Name"] = "polish-aurora-cluster" }
+    }
+  }
+}

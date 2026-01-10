@@ -1,0 +1,62 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/EC2.pkl"
+import "../../pkg/schemas/aws/AutoScaling.pkl"
+
+aws {
+  region = "us-east-1"
+
+  // 1. VPC & Subnet (Dependencies)
+  vpcs = new Listing {
+    new EC2.Vpc {
+      cidrBlock = "10.0.0.0/16"
+      tags = new Mapping { ["Name"] = "asg-vpc" }
+    }
+  }
+
+  subnets = new Listing {
+    new EC2.Subnet {
+      vpcId = "ptr://aws:EC2.Vpc/asg-vpc/id"
+      cidrBlock = "10.0.1.0/24"
+      availabilityZone = "us-east-1a"
+      tags = new Mapping { ["Name"] = "asg-subnet-1" }
+    }
+  }
+
+  // 2. Launch Template
+  launchTemplates = new Listing {
+    new EC2.LaunchTemplate {
+      name = "my-template"
+      imageId = "ami-12345678"
+      instanceType = "t3.micro"
+      userData = "IyEvYmluL2Jhc2gKZWNobyAiaGVsbG8i" // Base64 "echo "hello""
+
+      // New fields
+      iamInstanceProfile = new Mapping { ["arn"] = "arn:aws:iam::123:instance-profile/role" }
+      securityGroupIds = new Listing { "sg-123456" }
+      blockDeviceMappings = new Listing {
+        new EC2.BlockDeviceMapping {
+          deviceName = "/dev/xvda"
+          ebs = new EC2.Ebs {
+            volumeSize = 20
+            volumeType = "gp3"
+            deleteOnTermination = true
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Auto Scaling Group
+  autoScalingGroups = new Listing {
+    new AutoScaling.AutoScalingGroup {
+      name = "my-asg"
+      launchTemplateName = "my-template"
+      minSize = 1
+      maxSize = 3
+      desiredCapacity = 2
+      vpcZoneIdentifier = new Listing { "ptr://aws:EC2.Subnet/asg-subnet-1/id" }
+      targetGroupArns = new Listing { "arn:aws:elasticloadbalancing:us-east-1:123:targetgroup/tg/123" }
+    }
+  }
+}

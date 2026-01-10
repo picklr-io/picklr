@@ -1,0 +1,74 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/EC2.pkl"
+import "../../pkg/schemas/aws/S3.pkl"
+
+aws {
+  region = "us-east-1"
+
+  // 1. VPCs for Peering
+  vpcs = new Listing {
+    new EC2.Vpc {
+      cidrBlock = "10.10.0.0/16"
+      tags = new Mapping { ["Name"] = "main-vpc" }
+    }
+    new EC2.Vpc {
+      cidrBlock = "10.20.0.0/16"
+      tags = new Mapping { ["Name"] = "peer-vpc" }
+    }
+  }
+
+  // 2. VPC Peering
+  vpcPeeringConnections = new Listing {
+    new EC2.VpcPeeringConnection {
+      vpcId = "ptr://aws:EC2.Vpc/main-vpc/id" // Assuming resolution works, or mock for plan verification
+      peerVpcId = "ptr://aws:EC2.Vpc/peer-vpc/id"
+      autoAccept = true
+      tags = new Mapping { ["Name"] = "main-to-peer" }
+    }
+  }
+
+  // 3. Network ACL
+  networkAcls = new Listing {
+    new EC2.NetworkAcl {
+      vpcId = "ptr://aws:EC2.Vpc/main-vpc/id"
+      ingress = new Listing {
+        new EC2.NetworkAclEntry {
+          ruleNumber = 100
+          protocol = "tcp"
+          ruleAction = "allow"
+          cidrBlock = "0.0.0.0/0"
+          fromPort = 80
+          toPort = 80
+        }
+      }
+      egress = new Listing {
+        new EC2.NetworkAclEntry {
+          ruleNumber = 100
+          protocol = "-1"
+          ruleAction = "allow"
+          cidrBlock = "0.0.0.0/0"
+        }
+      }
+      tags = new Mapping { ["Name"] = "main-nacl" }
+    }
+  }
+
+  // 4. Transit Gateway
+  transitGateways = new Listing {
+    new EC2.TransitGateway {
+      description = "Main TGW"
+      tags = new Mapping { ["Name"] = "main-tgw" }
+    }
+  }
+
+  // 5. VPC Endpoint
+  vpcEndpoints = new Listing {
+    new EC2.VpcEndpoint {
+      vpcId = "ptr://aws:EC2.Vpc/main-vpc/id"
+      serviceName = "com.amazonaws.us-east-1.s3"
+      vpcEndpointType = "Gateway"
+      tags = new Mapping { ["Name"] = "s3-endpoint" }
+    }
+  }
+}

@@ -22,10 +22,14 @@ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17 h1:WWLqlh79iO48yLkj1v
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.17/go.mod h1:EhG22vHRrvF8oXSTYStZhJc1aUgKtnJe+aOiFEV90cM=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 h1:WKuaxf++XKWlHWu9ECbMlha8WOEGm0OUEZqm4K/Gcfk=
 github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4/go.mod h1:ZWy7j6v1vWGmPReu0iSGvRiise4YI5SkR3OHKTZ6Wuc=
-github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.16 h1:CjMzUs78RDDv4ROu3JnJn/Ig1r6ZD7/T2DXLLRpejic=
-github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.16/go.mod h1:uVW4OLBqbJXSHJYA9svT9BluSvvwbzLQ2Crf6UPzR3c=
+github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.17 h1:JqcdRG//czea7Ppjb+g/n4o8i/R50aTBHkA7vu0lK+k=
+github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.17/go.mod h1:CO+WeGmIdj/MlPel2KwID9Gt7CNq4M65HUfBW97liM0=
+github.com/aws/aws-sdk-go-v2/service/acm v1.37.19 h1:6BPfgg/Y4Pmrdr8KDwHx2CYkw8qPEaGQ+aixjuAY/0U=
+github.com/aws/aws-sdk-go-v2/service/acm v1.37.19/go.mod h1:mhOStWeEa1xP99WNNPstX75qgqWgJycL5H7UwZQbqbo=
 github.com/aws/aws-sdk-go-v2/service/apigateway v1.38.4 h1:V8gcFwJPP3eXZXpeui+p97JmO7WtCkQlEAHrE6Kyt0k=
 github.com/aws/aws-sdk-go-v2/service/apigateway v1.38.4/go.mod h1:iJF5UdwkFue/YuUGCFsCCdT3SBMUx0s+h5TNi0Sz+qg=
+github.com/aws/aws-sdk-go-v2/service/autoscaling v1.62.5 h1:3maqUQlVW7C6zAdSknv6V/LInH/RJaDW0kTFcy7dkOw=
+github.com/aws/aws-sdk-go-v2/service/autoscaling v1.62.5/go.mod h1:8O5Pj92iNpfw/Fa7WdHbn6YiEjDoVdutz+9PGRNoP3Y=
 github.com/aws/aws-sdk-go-v2/service/cloudfront v1.59.0 h1:evSZnlPGyDgStAmjLK9LcSoLvEk3oSUyJz4KIFfzJEs=
 github.com/aws/aws-sdk-go-v2/service/cloudfront v1.59.0/go.mod h1:9Hd/cqshF4zl13KGLkWtRfITbvKR6m6FZHwhL2BYDSY=
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.53.1 h1:ElB5x0nrBHgQs+XcpQ1XJpSJzMFCq6fDTpT6WQCWOtQ=
@@ -42,6 +46,8 @@ github.com/aws/aws-sdk-go-v2/service/ecs v1.70.1 h1:3USGpUZbK84ZuMh5vdFj/I5W+N4D
 github.com/aws/aws-sdk-go-v2/service/ecs v1.70.1/go.mod h1:pMlGFDpHoLTJOIZHGdJOAWmi+xeIlQXuFTuQxs1epYE=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.54.6 h1:fQR1aeZKaiPkNPya0JMy2nhsoqoSgIWc3/QTiTiL1K0=
 github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.54.6/go.mod h1:oJRLDix51wqBDlP9dv+blFkvvf7HESolQz5cdhdmV4A=
+github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.18 h1:Zqe/Mbpjy3Vk0IKreW4cdxz2PBb0JNCeMwYAKbuBnvg=
+github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.18/go.mod h1:oGNgLQOntNCt7Tl3d1NQu5QKFxdufg4huUAmyNECPDU=
 github.com/aws/aws-sdk-go-v2/service/iam v1.53.1 h1:xNCUk9XN6Pa9PyzbEfzgRpvEIVlqtth402yjaWvNMu4=
 github.com/aws/aws-sdk-go-v2/service/iam v1.53.1/go.mod h1:GNQZL4JRSGH6L0/SNGOtffaB1vmlToYp3KtcUIB0NhI=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 h1:0ryTNEdJbzUCEWkVXEXoqlXV72J5keC1GvILMOuD00E=
@@ -64,6 +70,8 @@ github.com/aws/aws-sdk-go-v2/service/route53 v1.62.1 h1:1jIdwWOulae7bBLIgB36OZ0D
 github.com/aws/aws-sdk-go-v2/service/route53 v1.62.1/go.mod h1:tE2zGlMIlxWv+7Otap7ctRp3qeKqtnja7DZguj3Vu/Y=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.95.0 h1:MIWra+MSq53CFaXXAywB2qg9YvVZifkk6vEGl/1Qor0=
 github.com/aws/aws-sdk-go-v2/service/s3 v1.95.0/go.mod h1:79S2BdqCJpScXZA2y+cpZuocWsjGjJINyXnOsf5DTz8=
+github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.1 h1:72DBkm/CCuWx2LMHAXvLDkZfzopT3psfAeyZDIt1/yE=
+github.com/aws/aws-sdk-go-v2/service/secretsmanager v1.41.1/go.mod h1:A+oSJxFvzgjZWkpM0mXs3RxB5O1SD6473w3qafOC9eU=
 github.com/aws/aws-sdk-go-v2/service/signin v1.0.4 h1:HpI7aMmJ+mm1wkSHIA2t5EaFFv5EFYXePW30p1EIrbQ=
 github.com/aws/aws-sdk-go-v2/service/signin v1.0.4/go.mod h1:C5RdGMYGlfM0gYq/tifqgn4EbyX99V15P2V3R+VHbQU=
 github.com/aws/aws-sdk-go-v2/service/sns v1.39.10 h1:wqErrLzV3iERQ7dbZbKQS0gOM6ngxZtmPwKyRGn+Krc=

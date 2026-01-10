@@ -1,0 +1,49 @@
+module picklr.aws.AutoScaling
+
+import "../Resource.pkl"
+
+/// An Auto Scaling Group.
+class AutoScalingGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the auto scaling group.
+  name: String
+
+  /// The name of the launch template.
+  launchTemplateName: String?
+
+  /// The minimum size of the group.
+  minSize: Int
+
+  /// The maximum size of the group.
+  maxSize: Int
+
+  /// The desired capacity of the group.
+  desiredCapacity: Int?
+
+  /// A list of subnet IDs for a virtual private cloud (VPC).
+  vpcZoneIdentifier: Listing<String>?
+
+  /// A list of Target Group ARNs.
+  targetGroupArns: Listing<String>?
+
+  properties = new {
+    ["auto_scaling_group_name"] = name
+    ["launch_template"] = new Mapping {
+      ["launch_template_name"] = launchTemplateName
+    }
+    ["min_size"] = minSize
+    ["max_size"] = maxSize
+    ["desired_capacity"] = desiredCapacity
+    ["vpc_zone_identifier"] =
+      if (vpcZoneIdentifier != null)
+        vpcZoneIdentifier!!.join(",")
+      else
+        null
+    ["target_group_arns"] =
+      if (targetGroupArns != null)
+        targetGroupArns.toList()
+      else
+        null
+  }
+}

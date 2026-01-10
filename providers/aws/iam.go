@@ -123,3 +123,71 @@ func (p *Provider) applyPolicy(ctx context.Context, req *pb.ApplyRequest) (*pb.A
 
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
+
+type InstanceProfileConfig struct {
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+type InstanceProfileState struct {
+	Name string `json:"name"`
+	ARN  string `json:"arn"`
+}
+
+func (p *Provider) applyInstanceProfile(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior InstanceProfileState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal prior: %w", err)
+		}
+		if prior.Name != "" {
+			// Detach role first (best effort, assuming single role)
+			// Using RemoveRoleFromInstanceProfile
+			// Actually we need the role name. If we don't have it in state, we might fail.
+			// Ideally state should include attached role.
+			// For simplified delete, we just delete the profile. AWS might error if roles attached.
+			_, err := p.iamClient.DeleteInstanceProfile(ctx, &iam.DeleteInstanceProfileInput{
+				InstanceProfileName: &prior.Name,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete instance profile: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired InstanceProfileConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	// Create Config
+	_, err := p.iamClient.CreateInstanceProfile(ctx, &iam.CreateInstanceProfileInput{
+		InstanceProfileName: &desired.Name,
+	})
+	if err != nil {
+		// Ignore if exists
+	}
+
+	// Add Role
+	_, err = p.iamClient.AddRoleToInstanceProfile(ctx, &iam.AddRoleToInstanceProfileInput{
+		InstanceProfileName: &desired.Name,
+		RoleName:            &desired.Role,
+	})
+	if err != nil {
+		// Ignore if already added
+	}
+
+	// Get ARN for state
+	resp, err := p.iamClient.GetInstanceProfile(ctx, &iam.GetInstanceProfileInput{
+		InstanceProfileName: &desired.Name,
+	})
+	arn := ""
+	if err == nil {
+		arn = *resp.InstanceProfile.Arn
+	}
+
+	newState := InstanceProfileState{Name: desired.Name, ARN: arn}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}

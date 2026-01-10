@@ -118,3 +118,248 @@ class Subnet extends Resource.Resource {
     ["map_public_ip_on_launch"] = mapPublicIpOnLaunch
   }
 }
+
+/// An Internet Gateway.
+class InternetGateway extends Resource.Resource {
+  provider = "aws"
+  vpcId: String?
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["vpc_id"] = vpcId
+    ["tags"] = tags
+  }
+}
+
+/// An Elastic IP.
+class ElasticIP extends Resource.Resource {
+  provider = "aws"
+  tags: Mapping<String, String>?
+  properties = new { ["tags"] = tags }
+}
+
+/// A NAT Gateway.
+class NatGateway extends Resource.Resource {
+  provider = "aws"
+  subnetId: String
+  allocationId: String
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["subnet_id"] = subnetId
+    ["allocation_id"] = allocationId
+    ["tags"] = tags
+  }
+}
+
+/// A Route Table.
+class RouteTable extends Resource.Resource {
+  provider = "aws"
+  vpcId: String
+  routes: Listing<Route>?
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["vpc_id"] = vpcId
+    ["routes"] =
+      if (routes != null)
+        routes
+          .toList()
+          .map((r) -> new Mapping {
+            ["destinationCidrBlock"] = r.destinationCidrBlock
+            ["gatewayId"] = r.gatewayId
+            ["natGatewayId"] = r.natGatewayId
+          })
+      else
+        null
+    ["tags"] = tags
+  }
+}
+
+class Route {
+  destinationCidrBlock: String
+  gatewayId: String?
+  natGatewayId: String?
+}
+
+/// An EC2 Key Pair.
+class KeyPair extends Resource.Resource {
+  provider = "aws"
+
+  /// The name for the key pair.
+  name: String
+
+  /// The public key material.
+  publicKey: String?
+
+  properties = new {
+    ["key_name"] = name
+    ["public_key"] = publicKey
+  }
+}
+
+/// An EC2 Launch Template.
+class LaunchTemplate extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the launch template.
+  name: String
+
+  /// The AMI ID.
+  imageId: String?
+
+  /// The instance type.
+  instanceType: String?
+
+  /// The name of the key pair.
+  keyName: String?
+
+  /// User data (Base64 encoded).
+  userData: String?
+
+  /// The IAM Instance Profile.
+  iamInstanceProfile: Mapping<String, String>?
+
+  /// Security Group IDs.
+  securityGroupIds: Listing<String>?
+
+  /// Block Device Mappings.
+  blockDeviceMappings: Listing<BlockDeviceMapping>?
+
+  properties = new {
+    ["launch_template_name"] = name
+    ["image_id"] = imageId
+    ["instance_type"] = instanceType
+    ["key_name"] = keyName
+    ["user_data"] = userData
+    ["iam_instance_profile"] = iamInstanceProfile
+    ["security_group_ids"] = securityGroupIds
+    ["block_device_mappings"] =
+      if (blockDeviceMappings != null)
+        blockDeviceMappings.toList().map((m) -> new Mapping {
+          ["deviceName"] = m.deviceName
+          ["ebs"] = new Mapping {
+            ["volumeSize"] = m.ebs.volumeSize
+            ["volumeType"] = m.ebs.volumeType
+            ["deleteOnTermination"] = m.ebs.deleteOnTermination
+          }
+        })
+      else null
+  }
+}
+
+class BlockDeviceMapping {
+  deviceName: String
+  ebs: Ebs
+}
+
+class Ebs {
+  volumeSize: Int
+  volumeType: String = "gp3"
+  deleteOnTermination: Boolean = true
+}
+
+}
+}
+
+/// An EBS Volume.
+class Volume extends Resource.Resource {
+  provider = "aws"
+
+  /// The availability zone where the volume will exist.
+  availabilityZone: String
+
+  /// The size of the drive in GiBs.
+  size: Int
+
+  /// The type of EBS volume. Can be "standard", "gp2", "gp3", "io1", "io2", "sc1", or "st1".
+  volumeType: String = "gp3"
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["availability_zone"] = availabilityZone
+    ["size"] = size
+    ["volume_type"] = volumeType
+    ["tags"] = tags
+  }
+}
+
+/// A VPC Peering Connection.
+class VpcPeeringConnection extends Resource.Resource {
+  provider = "aws"
+
+  /// The ID of the requester VPC.
+  vpcId: String
+
+  /// The ID of the VPC with which you are creating the VPC Peering Connection.
+  peerVpcId: String
+
+  /// Auto-accept the peering connection.
+  autoAccept: Boolean = true
+
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["vpc_id"] = vpcId
+    ["peer_vpc_id"] = peerVpcId
+    ["auto_accept"] = autoAccept
+    ["tags"] = tags
+  }
+}
+
+/// A Transit Gateway.
+class TransitGateway extends Resource.Resource {
+  provider = "aws"
+
+  description: String?
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["description"] = description
+    ["tags"] = tags
+  }
+}
+
+/// A Transit Gateway VPC Attachment.
+class TransitGatewayAttachment extends Resource.Resource {
+  provider = "aws"
+
+  transitGatewayId: String
+  vpcId: String
+  subnetIds: Listing<String>
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["transit_gateway_id"] = transitGatewayId
+    ["vpc_id"] = vpcId
+    ["subnet_ids"] = subnetIds.toList()
+    ["tags"] = tags
+  }
+}
+
+/// A VPC Endpoint.
+class VpcEndpoint extends Resource.Resource {
+  provider = "aws"
+
+  vpcId: String
+  serviceName: String
+  vpcEndpointType: String = "Gateway"
+  routeTableIds: Listing<String>?
+  subnetIds: Listing<String>?
+  securityGroupIds: Listing<String>?
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["vpc_id"] = vpcId
+    ["service_name"] = serviceName
+    ["vpc_endpoint_type"] = vpcEndpointType
+    ["route_table_ids"] = if (routeTableIds != null) routeTableIds.toList() else null
+    ["subnet_ids"] = if (subnetIds != null) subnetIds.toList() else null
+    ["security_group_ids"] = if (securityGroupIds != null) securityGroupIds.toList() else null
+    ["tags"] = tags
+  }
+}
+
+

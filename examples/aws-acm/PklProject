@@ -1,0 +1,7 @@
+amends "pkl:Project"
+
+dependencies {
+  ["picklr"] {
+    uri = "file:///Users/satishbabariya/Documents/picklr/pkg/schemas/aws/Provider.pkl"
+  }
+}

@@ -1,0 +1,21 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/SecretsManager.pkl"
+
+aws {
+  region = "us-east-1"
+
+  secrets = new Listing {
+    new SecretsManager.Secret {
+      name = "my-app-secret"
+      description = "A secret for my app"
+    }
+  }
+
+  secretVersions = new Listing {
+    new SecretsManager.SecretVersion {
+      secretId = "ptr://aws:SecretsManager.Secret/my-app-secret/name" // Name reference
+      secretString = "{\"username\":\"admin\",\"password\":\"password123\"}"
+    }
+  }
+}

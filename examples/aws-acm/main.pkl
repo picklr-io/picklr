@@ -1,0 +1,22 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/ACM.pkl"
+
+aws {
+  region = "us-east-1"
+
+  certificates = new Listing {
+    new ACM.Certificate {
+      domainName = "example.com"
+      validationMethod = "DNS"
+      tags = new Mapping { ["Name"] = "example-cert" }
+    }
+  }
+
+  // Optional: Validation resource (might hang if not validatable, so maybe just plan it)
+  certificateValidations = new Listing {
+    new ACM.CertificateValidation {
+      certificateArn = "ptr://aws:ACM.Certificate/example.com/arn" // ARN reference
+    }
+  }
+}

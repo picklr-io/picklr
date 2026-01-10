@@ -36,4 +36,23 @@ class Policy extends Resource.Resource {
     ["name"] = name
     ["policy"] = policy
   }
+
 }
+
+/// An IAM Instance Profile.
+
+class InstanceProfile extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the instance profile.
+  name: String
+
+  /// The name of the role to add to the profile.
+  role: String
+
+  properties = new {
+    ["name"] = name
+    ["role"] = role
+  }
+}
+

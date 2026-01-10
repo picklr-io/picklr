@@ -32,4 +32,62 @@ class Instance extends Resource.Resource {
     ["master_username"] = masterUsername
     ["master_user_password"] = masterUserPassword
   }
+
 }
+
+/// An RDS DB Subnet Group.
+class DBSubnetGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the DB subnet group.
+  name: String
+
+  /// A list of VPC subnet IDs.
+  subnetIds: Listing<String>
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["name"] = name
+    ["subnet_ids"] = subnetIds.toList()
+    ["tags"] = tags
+  }
+}
+
+/// An RDS DB Cluster (Aurora).
+class DBCluster extends Resource.Resource {
+  provider = "aws"
+
+  /// The cluster identifier.
+  identifier: String
+
+  /// The name of the database engine to be used for this DB cluster.
+  engine: String
+
+  /// The name of the master DB user.
+  masterUsername: String?
+
+  /// The master password for the DB cluster.
+  masterUserPassword: String?
+
+  /// The name of the database to create when the DB cluster is created.
+  databaseName: String?
+
+  /// A DB subnet group to associate with this DB cluster.
+  dbSubnetGroupName: String?
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["identifier"] = identifier
+    ["engine"] = engine
+    ["master_username"] = masterUsername
+    ["master_user_password"] = masterUserPassword
+    ["database_name"] = databaseName
+    ["db_subnet_group_name"] = dbSubnetGroupName
+    ["tags"] = tags
+  }
+}
+

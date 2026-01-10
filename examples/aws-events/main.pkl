@@ -1,0 +1,33 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/EventBridge.pkl"
+
+aws {
+  region = "us-east-1"
+
+  // 1. Event Bus
+  eventBuses = new Listing {
+    new EventBridge.EventBus {
+      name = "my-custom-bus"
+    }
+  }
+
+  // 2. Rule
+  rules = new Listing {
+    new EventBridge.Rule {
+      name = "my-scheduled-rule"
+      eventBusName = "default" // or use my-custom-bus
+      scheduleExpression = "rate(5 minutes)"
+    }
+  }
+
+  // 3. Target
+  targets = new Listing {
+    new EventBridge.Target {
+      rule = "my-scheduled-rule"
+      eventBusName = "default"
+      arn = "arn:aws:lambda:us-east-1:123456789012:function:my-function" // Mock ARN
+      id = "my-target-1"
+    }
+  }
+}

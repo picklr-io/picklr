@@ -44,4 +44,22 @@ class BucketObject extends Resource.Resource {
     ["source"] = source
     ["content"] = content
   }
+
 }
+
+/// An Amazon S3 bucket policy.
+class BucketPolicy extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the bucket to which to apply the policy.
+  bucket: String
+
+  /// The text of the policy.
+  policy: String
+
+  properties = new {
+    ["bucket"] = bucket
+    ["policy"] = policy
+  }
+}
+

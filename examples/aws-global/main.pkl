@@ -1,0 +1,42 @@
+amends "../../pkg/schemas/Config.pkl"
+
+import "../../pkg/schemas/aws/Route53.pkl"
+import "../../pkg/schemas/aws/CloudFront.pkl"
+
+aws {
+  region = "us-east-1"
+
+  // 1. Route53 Hosted Zone
+  hostedZones = new Listing {
+    new Route53.HostedZone {
+      name = "example.com."
+    }
+  }
+
+  // 2. Route53 Record
+  recordSets = new Listing {
+    new Route53.RecordSet {
+      name = "www.example.com."
+      type = "A"
+      ttl = 300
+      zoneId = "ptr://aws:Route53.HostedZone/example.com./zone_id"
+      records = new Listing { "1.2.3.4" }
+    }
+  }
+
+  // 3. CloudFront Distribution
+  distributions = new Listing {
+    new CloudFront.Distribution {
+      enabled = true
+      origins = new Listing {
+        new CloudFront.Origin {
+          domainName = "my-bucket.s3.amazonaws.com"
+          originId = "my-s3-origin"
+        }
+      }
+      defaultCacheBehavior = new CloudFront.DefaultCacheBehavior {
+        targetOriginId = "my-s3-origin"
+      }
+    }
+  }
+}

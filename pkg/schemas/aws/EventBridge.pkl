@@ -1,0 +1,69 @@
+module picklr.aws.EventBridge
+
+import "../Resource.pkl"
+
+/// An EventBridge Event Bus.
+class EventBus extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the new event bus.
+  name: String
+
+  properties = new {
+    ["name"] = name
+  }
+}
+
+/// An EventBridge Rule.
+class Rule extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the rule.
+  name: String
+
+  /// The name or ARN of the event bus to associate with this rule.
+  /// If you omit this, the default event bus is used.
+  eventBusName: String?
+
+  /// The event pattern.
+  eventPattern: String?
+
+  /// The scheduling expression.
+  /// For example, "cron(0 20 * * ? *)" or "rate(5 minutes)".
+  scheduleExpression: String?
+
+  properties = new {
+    ["Name"] = name
+    ["EventBusName"] = eventBusName
+    ["EventPattern"] = eventPattern
+    ["ScheduleExpression"] = scheduleExpression
+  }
+}
+
+/// An EventBridge Target.
+class Target extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the rule.
+  rule: String
+
+  /// The name of the event bus.
+  eventBusName: String?
+
+  /// The Amazon Resource Name (ARN) of the target.
+  arn: String
+
+  /// The unique target assignment ID.
+  id: String
+
+  properties = new {
+    ["Rule"] = rule
+    ["EventBusName"] = eventBusName
+    ["Targets"] = new Listing {
+      new Mapping {
+        ["Id"] = id
+        ["Arn"] = arn
+      }
+    }
+  }
+}

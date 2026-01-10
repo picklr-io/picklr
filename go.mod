@@ -27,7 +27,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sns v1.39.10
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.20
 	github.com/aws/smithy-go v1.24.0
-	github.com/docker/docker v27.3.1+incompatible
+	github.com/docker/docker v28.0.0+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/spf13/cobra v1.10.2

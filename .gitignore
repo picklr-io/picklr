@@ -1,0 +1,24 @@
+# Binaries
+picklr
+
+# Editor directories
+.idea/
+.vscode/
+
+# Build artifacts
+dist/
+bin/
+
+# Go artifacts
+*.exe
+*.test
+*.prof
+
+# OS specific
+.DS_Store
+
+# Pkl
+.pkl-lsp/
+
+# Agent artifacts
+.gemini/

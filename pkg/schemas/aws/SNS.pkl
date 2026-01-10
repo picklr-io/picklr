@@ -1,0 +1,39 @@
+module picklr.aws.SNS
+
+import "../Resource.pkl"
+
+/// An SNS Topic.
+class Topic extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the topic.
+  name: String
+
+  /// The display name to use for a topic with SMS subscriptions.
+  displayName: String?
+
+  properties = new {
+    ["name"] = name
+    ["display_name"] = displayName
+  }
+}
+
+/// An SNS Subscription.
+class Subscription extends Resource.Resource {
+  provider = "aws"
+
+  /// The ARN of the SNS topic to subscribe to.
+  topicArn: String
+
+  /// The protocol you want to use.
+  protocol: String // http, https, email, sms, sqs, lambda
+
+  /// The endpoint that you want to receive notifications.
+  endpoint: String
+
+  properties = new {
+    ["topic_arn"] = topicArn
+    ["protocol"] = protocol
+    ["endpoint"] = endpoint
+  }
+}

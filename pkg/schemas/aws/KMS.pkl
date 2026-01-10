@@ -1,0 +1,39 @@
+module picklr.aws.KMS
+
+import "../Resource.pkl"
+
+/// A KMS Key.
+class Key extends Resource.Resource {
+  provider = "aws"
+
+  /// The description of the key.
+  description: String?
+
+  /// Specifies the intended use of the key.
+  keyUsage: String = "ENCRYPT_DECRYPT"
+
+  /// Specifies whether the key is enabled.
+  enabled: Boolean = true
+
+  properties = new Mapping {
+    ["description"] = description
+    ["key_usage"] = keyUsage
+    ["enabled"] = enabled
+  }
+}
+
+/// A KMS Alias.
+class Alias extends Resource.Resource {
+  provider = "aws"
+
+  /// The display name of the alias.
+  aliasName: String
+
+  /// The identifier of the key to which the alias refers.
+  targetKeyId: String
+
+  properties = new Mapping {
+    ["alias_name"] = aliasName
+    ["target_key_id"] = targetKeyId
+  }
+}

@@ -1,0 +1,122 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/EC2.pkl"
+import "../../pkg/schemas/aws/ECR.pkl"
+import "../../pkg/schemas/aws/ECS.pkl"
+import "../../pkg/schemas/aws/ELBv2.pkl"
+import "../../pkg/schemas/aws/IAM.pkl"
+
+aws {
+  region = "us-east-1"
+
+  vpcs = new Listing {
+    new EC2.Vpc {
+      cidrBlock = "10.0.0.0/16"
+      tags = new Mapping { ["Name"] = "ContainerVPC" }
+    }
+  }
+
+  // Assuming we get VPC ID and subnet IDs from output or data source in real life
+  // Here we just reference mock IDs for the plan
+
+  repositories = new Listing {
+    new ECR.Repository {
+      repositoryName = "my-app"
+    }
+  }
+
+  clusters = new Listing {
+    new ECS.Cluster {
+      clusterName = "my-cluster"
+    }
+  }
+
+  loadBalancers = new Listing {
+    new ELBv2.LoadBalancer {
+      name = "my-alb"
+      subnets = new Listing {
+        "subnet-123"
+        "subnet-456"
+      }
+      securityGroups = new Listing {
+        "sg-123"
+      }
+      type = "application"
+    }
+  }
+
+  targetGroups = new Listing {
+    new ELBv2.TargetGroup {
+      name = "my-tg"
+      port = 80
+      protocol = "HTTP"
+      vpcId = "vpc-123"
+      targetType = "ip"
+    }
+  }
+
+  listeners = new Listing {
+    new ELBv2.Listener {
+      loadBalancerArn =
+        "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/my-alb/123"
+      port = 80
+      protocol = "HTTP"
+      defaultActions = new Listing {
+        new ELBv2.Action {
+          type = "forward"
+          targetGroupArn =
+            "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-tg/123"
+        }
+      }
+    }
+  }
+
+  taskDefinitions = new Listing {
+    new ECS.TaskDefinition {
+      family = "my-app"
+      cpu = "256"
+      memory = "512"
+      networkMode = "awsvpc"
+      containerDefinitions = new Listing {
+        new ECS.ContainerDefinition {
+          name = "app"
+          image = "nginx:latest"
+          cpu = 256
+          memory = 512
+          portMappings = new Listing {
+            new ECS.PortMapping {
+              containerPort = 80
+            }
+          }
+        }
+      }
+    }
+  }
+
+  services = new Listing {
+    new ECS.Service {
+      serviceName = "my-service"
+      cluster = "my-cluster"
+      taskDefinition = "my-app"
+      desiredCount = 2
+      launchType = "FARGATE"
+      networkConfiguration = new ECS.NetworkConfiguration {
+        subnets = new Listing {
+          "subnet-123"
+          "subnet-456"
+        }
+        securityGroups = new Listing {
+          "sg-123"
+        }
+        assignPublicIp = true
+      }
+      loadBalancers = new Listing {
+        new ECS.LoadBalancer {
+          targetGroupArn =
+            "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-tg/123"
+          containerName = "app"
+          containerPort = 80
+        }
+      }
+    }
+  }
+}

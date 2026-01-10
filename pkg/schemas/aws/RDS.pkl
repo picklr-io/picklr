@@ -1,0 +1,35 @@
+module picklr.aws.RDS
+
+import "../Resource.pkl"
+
+/// An RDS Instance.
+class Instance extends Resource.Resource {
+  provider = "aws"
+
+  /// The DB instance identifier.
+  identifier: String
+
+  /// The name of the database engine to be used for this instance.
+  engine: String
+
+  /// The compute and memory capacity of the DB instance.
+  instanceClass: String
+
+  /// The allocated storage size in gigabytes (GB).
+  allocatedStorage: Int = 20
+
+  /// The master username for the DB instance.
+  masterUsername: String
+
+  /// The master password for the DB instance.
+  masterUserPassword: String
+
+  properties = new {
+    ["identifier"] = identifier
+    ["engine"] = engine
+    ["instance_class"] = instanceClass
+    ["allocated_storage"] = allocatedStorage
+    ["master_username"] = masterUsername
+    ["master_user_password"] = masterUserPassword
+  }
+}

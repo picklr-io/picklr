@@ -1,0 +1,22 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/Route53.pkl"
+
+aws {
+  region = "us-east-1"
+
+  hostedZones = new Listing {
+    new Route53.HostedZone {
+      name = "example.com."
+    }
+  }
+
+  recordSets = new Listing {
+    new Route53.RecordSet {
+      name = "www.example.com."
+      type = "A"
+      ttl = 300
+      zoneId = "Z1234567890ABC" // Mock Zone ID, in real life would come from output of hostedZone
+      records = new Listing { "192.0.2.1" }
+    }
+  }
+}

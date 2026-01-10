@@ -1,0 +1,120 @@
+module picklr.aws.EC2
+
+import "../Resource.pkl"
+
+/// An EC2 Intance.
+class Instance extends Resource.Resource {
+  provider = "aws"
+
+  /// The AMI to use for the instance.
+  ami: String
+
+  /// The instance type to use for the instance.
+  instanceType: String
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["ami"] = ami
+    ["instance_type"] = instanceType
+    ["tags"] = tags
+  }
+}
+
+/// A VPC.
+class Vpc extends Resource.Resource {
+  provider = "aws"
+
+  /// The CIDR block for the VPC.
+  cidrBlock: String
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["cidr_block"] = cidrBlock
+    ["tags"] = tags
+  }
+}
+
+/// A VPC Security Group.
+class SecurityGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the security group.
+  name: String
+
+  /// The name of the security group description.
+  description: String = "Managed by Picklr"
+
+  /// The VPC ID.
+  vpcId: String?
+
+  /// Ingress rules.
+  ingress: Listing<SecurityGroupRule>?
+
+  /// Egress rules.
+  egress: Listing<SecurityGroupRule>?
+
+  properties = new {
+    ["name"] = name
+    ["description"] = description
+    ["vpc_id"] = vpcId
+    ["ingress"] =
+      if (ingress != null)
+        ingress
+          .toList()
+          .map((rule) -> new Mapping {
+            ["fromPort"] = rule.fromPort
+            ["toPort"] = rule.toPort
+            ["protocol"] = rule.protocol
+            ["cidrBlocks"] = rule.cidrBlocks
+          })
+      else
+        null
+    ["egress"] =
+      if (egress != null)
+        egress
+          .toList()
+          .map((rule) -> new Mapping {
+            ["fromPort"] = rule.fromPort
+            ["toPort"] = rule.toPort
+            ["protocol"] = rule.protocol
+            ["cidrBlocks"] = rule.cidrBlocks
+          })
+      else
+        null
+  }
+}
+
+class SecurityGroupRule {
+  fromPort: Int
+  toPort: Int
+  protocol: String
+  cidrBlocks: Listing<String>?
+}
+
+/// A VPC Subnet.
+class Subnet extends Resource.Resource {
+  provider = "aws"
+
+  /// The VPC ID.
+  vpcId: String
+
+  /// The CIDR block for the subnet.
+  cidrBlock: String
+
+  /// The Availability Zone for the subnet.
+  availabilityZone: String?
+
+  /// Map public IP on launch.
+  mapPublicIpOnLaunch: Boolean = false
+
+  properties = new {
+    ["vpc_id"] = vpcId
+    ["cidr_block"] = cidrBlock
+    ["availability_zone"] = availabilityZone
+    ["map_public_ip_on_launch"] = mapPublicIpOnLaunch
+  }
+}

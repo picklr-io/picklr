@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/picklr-io/picklr/pkg/proto/provider"
+	"github.com/picklr-io/picklr/providers/aws"
 	"github.com/picklr-io/picklr/providers/docker"
 	"github.com/picklr-io/picklr/providers/null"
 )
@@ -38,6 +39,8 @@ func (r *Registry) LoadProvider(name string) error {
 		p = null.New()
 	case "docker":
 		p = docker.New()
+	case "aws":
+		p = aws.New()
 	default:
 		return fmt.Errorf("unknown provider: %s", name)
 	}

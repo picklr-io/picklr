@@ -1,0 +1,79 @@
+module picklr.aws.APIGateway
+
+import "../Resource.pkl"
+
+/// An API Gateway REST API.
+class RestApi extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the REST API.
+  name: String
+
+  /// The description of the REST API.
+  description: String?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["description"] = description
+  }
+}
+
+/// An API Gateway Resource.
+class ApiResource extends Resource.Resource {
+  provider = "aws"
+
+  /// The ID of the REST API.
+  restApiId: String
+
+  /// The ID of the parent resource.
+  parentId: String
+
+  /// The last path segment for this resource.
+  pathPart: String
+
+  properties = new Mapping {
+    ["rest_api_id"] = restApiId
+    ["parent_id"] = parentId
+    ["path_part"] = pathPart
+  }
+}
+
+/// An API Gateway Method.
+class Method extends Resource.Resource {
+  provider = "aws"
+
+  /// The ID of the REST API.
+  restApiId: String
+
+  /// The ID of the resource.
+  resourceId: String
+
+  /// The HTTP method.
+  httpMethod: String
+
+  /// The type of authorization used for the method.
+  authorization: String = "NONE"
+
+  properties = new Mapping {
+    ["rest_api_id"] = restApiId
+    ["resource_id"] = resourceId
+    ["http_method"] = httpMethod
+    ["authorization"] = authorization
+  }
+}
+
+/// An API Gateway Deployment.
+class Deployment extends Resource.Resource {
+  provider = "aws"
+
+  /// The ID of the REST API.
+  restApiId: String
+
+  /// The name of the stage.
+  stageName: String?
+
+  properties = new Mapping {
+    ["rest_api_id"] = restApiId
+    ["stage_name"] = stageName
+  }
+}

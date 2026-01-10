@@ -1,0 +1,47 @@
+module picklr.aws.S3
+
+import "../Resource.pkl"
+
+/// An Amazon S3 bucket.
+class Bucket extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the bucket. If omitted, Terraform will assign a random, unique name.
+  bucket: String?
+
+  /// The canned ACL to apply. Defaults to "private".
+  acl: String = "private"
+
+  /// A boolean that indicates all objects should be deleted from the bucket so that the bucket can be destroyed without error.
+  forceDestroy: Boolean = false
+
+  properties = new {
+    ["bucket"] = bucket
+    ["acl"] = acl
+    ["force_destroy"] = forceDestroy
+  }
+}
+
+/// An object within an S3 bucket.
+class BucketObject extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the bucket to put the object in.
+  bucket: String
+
+  /// The name of the object once it is in the bucket.
+  key: String
+
+  /// The path to the source file being uploaded to the bucket.
+  source: String?
+
+  /// The content of the object.
+  content: String?
+
+  properties = new {
+    ["bucket"] = bucket
+    ["key"] = key
+    ["source"] = source
+    ["content"] = content
+  }
+}

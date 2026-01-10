@@ -1,5 +1,6 @@
 module picklr.Config
 
+import "aws/Provider.pkl"
 import "docker/Docker.pkl"
 import "Resource.pkl"
 
@@ -7,12 +8,13 @@ import "Resource.pkl"
 /// Docker provider configuration
 docker: Docker.Config?
 
-// Future providers...
-// aws: AWS.Config?
+// AWS provider configuration
+aws: Provider.Config?
 
 /// Flattened list of all resources for the engine.
-resources: Listing<Resource.Resource> =
-  (if (docker != null) docker.allResources else new Listing {})
-// + (if (aws != null) aws.allResources else new Listing {})
+resources: Listing<Resource.Resource> = new Listing {
+  ...(if (docker != null) docker.allResources else new Listing {})
+  ...(if (aws != null) aws.allResources else new Listing {})
+}
 /// Output values to expose.
 outputs: Mapping<String, Any>?

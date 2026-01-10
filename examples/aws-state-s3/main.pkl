@@ -1,0 +1,13 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/S3.pkl"
+
+aws {
+  region = "us-east-1"
+
+  buckets = new Listing {
+    new S3.Bucket {
+      bucket = "picklr-state-test-bucket-123" // Unique name
+      acl = "private"
+    }
+  }
+}

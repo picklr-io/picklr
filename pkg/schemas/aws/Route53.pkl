@@ -1,0 +1,43 @@
+module picklr.aws.Route53
+
+import "../Resource.pkl"
+
+/// A Route53 Hosted Zone.
+class HostedZone extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the domain.
+  name: String
+
+  properties = new Mapping {
+    ["name"] = name
+  }
+}
+
+/// A Route53 Record Set.
+class RecordSet extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the record.
+  name: String
+
+  /// The resource record cache time to live (TTL), in seconds.
+  ttl: Int = 300
+
+  /// The record type.
+  type: String // A, AAAA, CNAME, MX, TXT, NS, SOA, SPF, SRV
+
+  /// The zone ID of the hosted zone.
+  zoneId: String
+
+  /// List of records.
+  records: Listing<String>
+
+  properties = new Mapping {
+    ["name"] = name
+    ["ttl"] = ttl
+    ["type"] = type
+    ["zone_id"] = zoneId
+    ["records"] = records
+  }
+}

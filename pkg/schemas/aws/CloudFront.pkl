@@ -1,0 +1,48 @@
+module picklr.aws.CloudFront
+
+import "../Resource.pkl"
+
+/// A CloudFront Distribution.
+class Distribution extends Resource.Resource {
+  provider = "aws"
+
+  /// Whether the distribution is enabled to accept end user requests for content.
+  enabled: Boolean = true
+
+  /// Valid values: "PriceClass_100", "PriceClass_200", "PriceClass_All".
+  priceClass: String = "PriceClass_100"
+
+  /// Default cache behavior.
+  defaultCacheBehavior: DefaultCacheBehavior
+
+  /// Origins.
+  origins: Listing<Origin>
+
+  properties = new Mapping {
+    ["enabled"] = enabled
+    ["price_class"] = priceClass
+    ["default_cache_behavior"] = new Mapping {
+      ["target_origin_id"] = defaultCacheBehavior.targetOriginId
+      ["viewer_protocol_policy"] = defaultCacheBehavior.viewerProtocolPolicy
+      ["allowed_methods"] = defaultCacheBehavior.allowedMethods
+    }
+    ["origins"] =
+      origins
+        .toList()
+        .map((o) -> new Mapping {
+          ["domain_name"] = o.domainName
+          ["origin_id"] = o.originId
+        })
+  }
+}
+
+class DefaultCacheBehavior {
+  targetOriginId: String
+  viewerProtocolPolicy: String = "allow-all"
+  allowedMethods: Listing<String> = new Listing { "GET"; "HEAD" }
+}
+
+class Origin {
+  domainName: String
+  originId: String
+}

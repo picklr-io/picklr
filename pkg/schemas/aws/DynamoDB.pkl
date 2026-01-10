@@ -1,0 +1,49 @@
+module picklr.aws.DynamoDB
+
+import "../Resource.pkl"
+
+/// A DynamoDB Table.
+class Table extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the table.
+  tableName: String
+
+  /// The attribute definitions.
+  attributes: Listing<AttributeDefinition>
+
+  /// The key schema.
+  keySchema: Listing<KeySchemaElement>
+
+  /// Billing mode (PROVISIONED or PAY_PER_REQUEST).
+  billingMode: String = "PAY_PER_REQUEST"
+
+  properties = new {
+    ["table_name"] = tableName
+    ["attributes"] =
+      attributes
+        .toList()
+        .map((a) -> new Mapping {
+          ["name"] = a.name
+          ["type"] = a.type
+        })
+    ["key_schema"] =
+      keySchema
+        .toList()
+        .map((k) -> new Mapping {
+          ["name"] = k.name
+          ["type"] = k.type
+        })
+    ["billing_mode"] = billingMode
+  }
+}
+
+class AttributeDefinition {
+  name: String
+  type: String // S, N, B
+}
+
+class KeySchemaElement {
+  name: String
+  type: String // HASH, RANGE
+}

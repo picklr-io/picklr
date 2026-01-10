@@ -1,0 +1,59 @@
+module picklr.aws.CloudWatch
+
+import "../Resource.pkl"
+
+/// A CloudWatch Log Group.
+class LogGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the log group.
+  logGroupName: String?
+
+  /// The number of days to retain the log events in the specified log group.
+  retentionInDays: Int = 0
+
+  properties = new Mapping {
+    ["log_group_name"] = logGroupName
+    ["retention_in_days"] = retentionInDays
+  }
+}
+
+/// A CloudWatch Metric Alarm.
+class Alarm extends Resource.Resource {
+  provider = "aws"
+
+  /// The name for the alarm.
+  alarmName: String
+
+  /// The name for the metric associated with the alarm.
+  metricName: String
+
+  /// The namespace for the metric associated with the alarm.
+  namespace: String
+
+  /// The value against which the specified statistic is compared.
+  threshold: Float
+
+  /// The arithmetic operation to use when comparing the specified statistic and threshold.
+  comparisonOperator: String // GreaterThanThreshold, LessThanThreshold, etc.
+
+  /// The number of periods over which data is compared to the specified threshold.
+  evaluationPeriods: Int = 1
+
+  /// The period, in seconds, over which the specified statistic is applied.
+  period: Int = 60
+
+  /// The statistic for the metric specified in MetricName.
+  statistic: String = "Average"
+
+  properties = new Mapping {
+    ["alarm_name"] = alarmName
+    ["metric_name"] = metricName
+    ["namespace"] = namespace
+    ["threshold"] = threshold
+    ["comparison_operator"] = comparisonOperator
+    ["evaluation_periods"] = evaluationPeriods
+    ["period"] = period
+    ["statistic"] = statistic
+  }
+}

@@ -1,0 +1,94 @@
+module picklr.aws.ELBv2
+
+import "../Resource.pkl"
+
+/// An Application/Network Load Balancer.
+class LoadBalancer extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the load balancer.
+  name: String
+
+  /// The type of load balancer. application or network.
+  type: String = "application"
+
+  /// The subnets to attach to the load balancer.
+  subnets: Listing<String>
+
+  /// The security groups to attach to the load balancer.
+  securityGroups: Listing<String>?
+
+  /// Scheme: internet-facing or internal.
+  scheme: String = "internet-facing"
+
+  properties = new Mapping {
+    ["name"] = name
+    ["type"] = type
+    ["subnets"] = subnets
+    ["security_groups"] = securityGroups
+    ["scheme"] = scheme
+  }
+}
+
+/// A Target Group.
+class TargetGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the target group.
+  name: String
+
+  /// The port on which the targets receive traffic.
+  port: Int
+
+  /// The protocol to use for routing traffic to the targets.
+  protocol: String // HTTP, HTTPS, TCP, TLS
+
+  /// The identifier of the Virtual Private Cloud (VPC).
+  vpcId: String?
+
+  /// The type of target that you must specify when registering targets with this target group.
+  targetType: String = "ip" // instance, ip, lambda
+
+  properties = new Mapping {
+    ["name"] = name
+    ["port"] = port
+    ["protocol"] = protocol
+    ["vpc_id"] = vpcId
+    ["target_type"] = targetType
+  }
+}
+
+/// A Listener.
+class Listener extends Resource.Resource {
+  provider = "aws"
+
+  /// The ARN of the load balancer.
+  loadBalancerArn: String
+
+  /// The port on which the load balancer is listening.
+  port: Int
+
+  /// The protocol for connections from clients to the load balancer.
+  protocol: String // HTTP, HTTPS, TCP, TLS
+
+  /// Default actions.
+  defaultActions: Listing<Action>
+
+  properties = new Mapping {
+    ["load_balancer_arn"] = loadBalancerArn
+    ["port"] = port
+    ["protocol"] = protocol
+    ["default_actions"] =
+      defaultActions
+        .toList()
+        .map((a) -> new Mapping {
+          ["type"] = a.type
+          ["target_group_arn"] = a.targetGroupArn
+        })
+  }
+}
+
+class Action {
+  type: String = "forward"
+  targetGroupArn: String?
+}

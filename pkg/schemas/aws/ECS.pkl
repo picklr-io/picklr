@@ -1,0 +1,139 @@
+module picklr.aws.ECS
+
+import "../Resource.pkl"
+
+/// An ECS Cluster.
+class Cluster extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the cluster.
+  clusterName: String
+
+  properties = new Mapping {
+    ["cluster_name"] = clusterName
+  }
+}
+
+/// An ECS Task Definition.
+class TaskDefinition extends Resource.Resource {
+  provider = "aws"
+
+  /// The family of the task definition.
+  family: String
+
+  /// The Docker networking mode to use for the containers in the task.
+  networkMode: String = "awsvpc"
+
+  /// The number of cpu units used by the task.
+  cpu: String?
+
+  /// The amount of memory (in MiB) used by the task.
+  memory: String?
+
+  /// A list of container definitions in JSON format.
+  containerDefinitions: Listing<ContainerDefinition>
+
+  properties = new Mapping {
+    ["family"] = family
+    ["network_mode"] = networkMode
+    ["cpu"] = cpu
+    ["memory"] = memory
+    ["container_definitions"] =
+      containerDefinitions
+        .toList()
+        .map((c) -> new Mapping {
+          ["name"] = c.name
+          ["image"] = c.image
+          ["cpu"] = c.cpu
+          ["memory"] = c.memory
+          ["portMappings"] =
+            c.portMappings
+              .toList()
+              .map((p) -> new Mapping {
+                ["containerPort"] = p.containerPort
+                ["hostPort"] = p.hostPort
+                ["protocol"] = p.protocol
+              })
+        })
+  }
+}
+
+class ContainerDefinition {
+  name: String
+  image: String
+  cpu: Int?
+  memory: Int?
+  portMappings: Listing<PortMapping>
+}
+
+class PortMapping {
+  containerPort: Int
+  hostPort: Int?
+  protocol: String = "tcp"
+}
+
+/// An ECS Service.
+class Service extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the service.
+  serviceName: String
+
+  /// The ARN of the cluster.
+  cluster: String
+
+  /// The task definition to use for tasks in the service.
+  taskDefinition: String
+
+  /// The desired number of instantiations of the task definition to keep running on the service.
+  desiredCount: Int = 1
+
+  /// The launch type on which to run your service.
+  launchType: String = "FARGATE"
+
+  /// Network configuration.
+  networkConfiguration: NetworkConfiguration?
+
+  /// Load balancers.
+  loadBalancers: Listing<LoadBalancer>?
+
+  properties = new Mapping {
+    ["service_name"] = serviceName
+    ["cluster"] = cluster
+    ["task_definition"] = taskDefinition
+    ["desired_count"] = desiredCount
+    ["launch_type"] = launchType
+    ["network_configuration"] =
+      if (networkConfiguration != null)
+        new Mapping {
+          ["subnets"] = networkConfiguration.subnets
+          ["security_groups"] = networkConfiguration.securityGroups
+          ["assign_public_ip"] = networkConfiguration.assignPublicIp
+        }
+      else
+        null
+    ["load_balancers"] =
+      if (loadBalancers != null)
+        loadBalancers
+          .toList()
+          .map((lb) -> new Mapping {
+            ["target_group_arn"] = lb.targetGroupArn
+            ["container_name"] = lb.containerName
+            ["container_port"] = lb.containerPort
+          })
+      else
+        null
+  }
+}
+
+class NetworkConfiguration {
+  subnets: Listing<String>
+  securityGroups: Listing<String>?
+  assignPublicIp: Boolean = false
+}
+
+class LoadBalancer {
+  targetGroupArn: String
+  containerName: String
+  containerPort: Int
+}

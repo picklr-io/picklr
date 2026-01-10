@@ -1,0 +1,23 @@
+module picklr.aws.SQS
+
+import "../Resource.pkl"
+
+/// An SQS Queue.
+class Queue extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the queue.
+  queueName: String
+
+  /// The visibility timeout for the queue, in seconds.
+  visibilityTimeout: Int = 30
+
+  /// The message retention period for the queue, in seconds.
+  messageRetentionPeriod: Int = 345600
+
+  properties = new {
+    ["queue_name"] = queueName
+    ["visibility_timeout"] = visibilityTimeout
+    ["message_retention_period"] = messageRetentionPeriod
+  }
+}

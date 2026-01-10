@@ -1,0 +1,19 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/EC2.pkl"
+
+aws {
+  region = "us-east-1"
+
+  instances = new Listing {
+    new EC2.Instance {
+      ami = "ami-0c55b159cbfafe1f0"
+      instanceType = "t2.micro"
+      tags = new Mapping { ["Name"] = "waiter-test" }
+    }
+  }
+}
+
+outputs = new Mapping {
+  ["InstanceID"] = aws.instances[0].output("id")
+  ["TestMessage"] = "Hello Picklr"
+}

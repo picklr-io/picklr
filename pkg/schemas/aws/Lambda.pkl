@@ -1,0 +1,31 @@
+module picklr.aws.Lambda
+
+import "../Resource.pkl"
+
+/// A Lambda Function.
+class Function extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the function.
+  functionName: String
+
+  /// The runtime environment for the Lambda function.
+  runtime: String
+
+  /// The name of the method within your code that Lambda calls to execute your function.
+  handler: String
+
+  /// The ARN of the IAM role that Lambda assumes when it executes your function.
+  role: String
+
+  /// The path to the function's deployment package within the local filesystem.
+  code: String? // Simplification: path to zip or directory
+
+  properties = new {
+    ["function_name"] = functionName
+    ["runtime"] = runtime
+    ["handler"] = handler
+    ["role"] = role
+    ["code"] = code
+  }
+}

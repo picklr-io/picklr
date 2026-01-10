@@ -1,0 +1,39 @@
+module picklr.aws.IAM
+
+import "../Resource.pkl"
+
+/// An IAM Role.
+class Role extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the role.
+  name: String
+
+  /// The policy that grants an entity permission to assume the role.
+  assumeRolePolicy: String
+
+  /// A map of tags to assign to the role.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["name"] = name
+    ["assume_role_policy"] = assumeRolePolicy
+    ["tags"] = tags
+  }
+}
+
+/// An IAM Policy.
+class Policy extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the policy.
+  name: String
+
+  /// The policy document.
+  policy: String
+
+  properties = new {
+    ["name"] = name
+    ["policy"] = policy
+  }
+}

@@ -1,0 +1,94 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/DynamoDB.pkl"
+import "../../pkg/schemas/aws/EC2.pkl"
+import "../../pkg/schemas/aws/IAM.pkl"
+import "../../pkg/schemas/aws/Lambda.pkl"
+import "../../pkg/schemas/aws/RDS.pkl"
+import "../../pkg/schemas/aws/S3.pkl"
+import "../../pkg/schemas/aws/SNS.pkl"
+import "../../pkg/schemas/aws/SQS.pkl"
+
+aws {
+  region = "us-east-1"
+
+  // Foundation
+  vpcs = new Listing {
+    new EC2.Vpc {
+      cidrBlock = "10.0.0.0/16"
+      tags = new Mapping { ["Name"] = "MainVPC" }
+    }
+  }
+
+  buckets = new Listing {
+    new S3.Bucket {
+      bucket = "my-app-logs-bucket"
+    }
+  }
+
+  roles = new Listing {
+    new IAM.Role {
+      name = "LambdaExecutionRole"
+      assumeRolePolicy =
+        """
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Action": "sts:AssumeRole",
+                "Principal": {
+                  "Service": "lambda.amazonaws.com"
+                },
+                "Effect": "Allow"
+              }
+            ]
+          }
+        """
+    }
+  }
+
+  // Serverless
+  tables = new Listing {
+    new DynamoDB.Table {
+      tableName = "Users"
+      attributes = new Listing {
+        new DynamoDB.AttributeDefinition { name = "UserId"; type = "S" }
+      }
+      keySchema = new Listing {
+        new DynamoDB.KeySchemaElement { name = "UserId"; type = "HASH" }
+      }
+    }
+  }
+
+  functions = new Listing {
+    new Lambda.Function {
+      functionName = "ProcessUser"
+      runtime = "nodejs18.x"
+      handler = "index.handler"
+      role = "arn:aws:iam::123456789012:role/LambdaExecutionRole" // Mock ARN reference
+      code = "./structs.go" // Just pointing to a file that exists for now
+    }
+  }
+
+  // Data & Messaging
+  queues = new Listing {
+    new SQS.Queue {
+      queueName = "UserQueue"
+    }
+  }
+
+  topics = new Listing {
+    new SNS.Topic {
+      name = "UserEvents"
+    }
+  }
+
+  dbInstances = new Listing {
+    new RDS.Instance {
+      identifier = "mydb"
+      engine = "mysql"
+      instanceClass = "db.t3.micro"
+      masterUsername = "admin"
+      masterUserPassword = "password123"
+    }
+  }
+}

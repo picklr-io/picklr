@@ -1,0 +1,165 @@
+module picklr.aws.Provider
+
+import "../Resource.pkl"
+import "APIGateway.pkl"
+import "CloudFront.pkl"
+import "CloudWatch.pkl"
+import "DynamoDB.pkl"
+import "EC2.pkl"
+import "ECR.pkl"
+import "ECS.pkl"
+import "ELBv2.pkl"
+import "IAM.pkl"
+import "KMS.pkl"
+import "Lambda.pkl"
+import "RDS.pkl"
+import "Route53.pkl"
+import "S3.pkl"
+import "SNS.pkl"
+import "SQS.pkl"
+
+/// Configuration for the AWS Provider.
+class Config {
+  /// The region where AWS operations will take place. Examples are us-east-1, us-west-2, etc.
+  region: String
+
+  /// The profile for API operations. If not set, the default profile created with `aws configure` will be used.
+  profile: String?
+
+  /// Shared credentials file path.
+  sharedCredentialsFile: String?
+
+  /// Access key for API operations.
+  accessKey: String?
+
+  /// Secret key for API operations.
+  secretKey: String?
+
+  /// List of S3 Buckets to manage.
+  buckets: Listing<S3.Bucket>?
+
+  /// List of EC2 Instances to manage.
+  instances: Listing<EC2.Instance>?
+
+  /// List of VPCs.
+  vpcs: Listing<EC2.Vpc>?
+
+  /// List of Subnets.
+  subnets: Listing<EC2.Subnet>?
+
+  /// List of Security Groups.
+  securityGroups: Listing<EC2.SecurityGroup>?
+
+  /// List of IAM Roles.
+  roles: Listing<IAM.Role>?
+
+  /// List of IAM Policies.
+  policies: Listing<IAM.Policy>?
+
+  /// List of Lambda Functions.
+  functions: Listing<Lambda.Function>?
+
+  /// List of DynamoDB Tables.
+  tables: Listing<DynamoDB.Table>?
+
+  /// List of RDS Instances.
+  dbInstances: Listing<RDS.Instance>?
+
+  /// List of SQS Queues.
+  queues: Listing<SQS.Queue>?
+
+  /// List of SNS Topics.
+  topics: Listing<SNS.Topic>?
+
+  /// List of SNS Subscriptions.
+  subscriptions: Listing<SNS.Subscription>?
+
+  /// List of ECR Repositories.
+  repositories: Listing<ECR.Repository>?
+
+  /// List of ECS Clusters.
+  clusters: Listing<ECS.Cluster>?
+
+  /// List of ECS Task Definitions.
+  taskDefinitions: Listing<ECS.TaskDefinition>?
+
+  /// List of ECS Services.
+  services: Listing<ECS.Service>?
+
+  /// List of ELBv2 Load Balancers.
+  loadBalancers: Listing<ELBv2.LoadBalancer>?
+
+  /// List of ELBv2 Target Groups.
+  targetGroups: Listing<ELBv2.TargetGroup>?
+
+  /// List of ELBv2 Listeners.
+  listeners: Listing<ELBv2.Listener>?
+
+  /// List of Route53 Hosted Zones.
+  hostedZones: Listing<Route53.HostedZone>?
+
+  /// List of Route53 Record Sets.
+  recordSets: Listing<Route53.RecordSet>?
+
+  /// List of API Gateway REST APIs.
+  restApis: Listing<APIGateway.RestApi>?
+
+  /// List of API Gateway Resources.
+  apiResources: Listing<APIGateway.ApiResource>?
+
+  /// List of API Gateway Methods.
+  methods: Listing<APIGateway.Method>?
+
+  /// List of API Gateway Deployments.
+  deployments: Listing<APIGateway.Deployment>?
+
+  /// List of CloudFront Distributions.
+  distributions: Listing<CloudFront.Distribution>?
+
+  /// List of CloudWatch Log Groups.
+  logGroups: Listing<CloudWatch.LogGroup>?
+
+  /// List of CloudWatch Alarms.
+  alarms: Listing<CloudWatch.Alarm>?
+
+  /// List of KMS Keys.
+  keys: Listing<KMS.Key>?
+
+  /// List of KMS Aliases.
+  aliases: Listing<KMS.Alias>?
+
+  /// Flattened list of all AWS resources.
+  allResources: Listing<Resource.Resource> = new Listing {
+    ...(if (buckets != null) buckets else new Listing {})
+    ...(if (instances != null) instances else new Listing {})
+    ...(if (vpcs != null) vpcs else new Listing {})
+    ...(if (subnets != null) subnets else new Listing {})
+    ...(if (securityGroups != null) securityGroups else new Listing {})
+    ...(if (roles != null) roles else new Listing {})
+    ...(if (policies != null) policies else new Listing {})
+    ...(if (functions != null) functions else new Listing {})
+    ...(if (tables != null) tables else new Listing {})
+    ...(if (dbInstances != null) dbInstances else new Listing {})
+    ...(if (queues != null) queues else new Listing {})
+    ...(if (topics != null) topics else new Listing {})
+    ...(if (subscriptions != null) subscriptions else new Listing {})
+    ...(if (repositories != null) repositories else new Listing {})
+    ...(if (clusters != null) clusters else new Listing {})
+    ...(if (taskDefinitions != null) taskDefinitions else new Listing {})
+    ...(if (services != null) services else new Listing {})
+    ...(if (loadBalancers != null) loadBalancers else new Listing {})
+    ...(if (targetGroups != null) targetGroups else new Listing {})
+    ...(if (listeners != null) listeners else new Listing {})
+    ...(if (hostedZones != null) hostedZones else new Listing {})
+    ...(if (recordSets != null) recordSets else new Listing {})
+    ...(if (restApis != null) restApis else new Listing {})
+    ...(if (apiResources != null) apiResources else new Listing {})
+    ...(if (methods != null) methods else new Listing {})
+    ...(if (deployments != null) deployments else new Listing {})
+    ...(if (distributions != null) distributions else new Listing {})
+    ...(if (logGroups != null) logGroups else new Listing {})
+    ...(if (alarms != null) alarms else new Listing {})
+    ...(if (keys != null) keys else new Listing {})
+    ...(if (aliases != null) aliases else new Listing {})
+  }
+}

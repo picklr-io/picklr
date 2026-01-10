@@ -1,0 +1,30 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/APIGateway.pkl"
+
+aws {
+  region = "us-east-1"
+
+  restApis = new Listing {
+    new APIGateway.RestApi {
+      name = "my-api"
+      description = "My First API"
+    }
+  }
+
+  apiResources = new Listing {
+    new APIGateway.ApiResource {
+      restApiId = "api-123" // Mock ID, in real usage would ref restApis[0]
+      parentId = "root-123"
+      pathPart = "users"
+    }
+  }
+
+  methods = new Listing {
+    new APIGateway.Method {
+      restApiId = "api-123"
+      resourceId = "res-123"
+      httpMethod = "GET"
+      authorization = "NONE"
+    }
+  }
+}

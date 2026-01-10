@@ -17,6 +17,10 @@ abstract class Resource {
 
   /// Dynamic properties for the provider (mapped from typed fields)
   properties: Mapping<String, Any> = new {}
+
+  /// Returns a pointer string to a specific attribute of this resource.
+  /// This is used to reference values that are not known until runtime (e.g., IDs).
+  function output(attribute: String): String = "ptr://${provider}:${type}/${name}/${attribute}"
 }
 
 /// Control over how the resource is created, updated, and destroyed.

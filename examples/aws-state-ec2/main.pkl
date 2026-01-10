@@ -1,0 +1,17 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/EC2.pkl"
+
+aws {
+  region = "us-east-1"
+
+  instances = new Listing {
+    new EC2.Instance {
+      ami = "ami-0c55b159cbfafe1f0" // Amazon Linux 2
+      instanceType = "t2.micro"
+      tags = new Mapping {
+        ["Name"] = "PicklrStateTest"
+        ["Environment"] = "Dev"
+      }
+    }
+  }
+}

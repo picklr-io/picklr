@@ -1,0 +1,19 @@
+module picklr.aws.ECR
+
+import "../Resource.pkl"
+
+/// An ECR Repository.
+class Repository extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the repository.
+  repositoryName: String
+
+  /// The image tag mutability setting for the repository.
+  imageTagMutability: String = "MUTABLE"
+
+  properties = new Mapping {
+    ["repository_name"] = repositoryName
+    ["image_tag_mutability"] = imageTagMutability
+  }
+}

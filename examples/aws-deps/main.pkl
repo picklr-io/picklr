@@ -1,0 +1,30 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/EC2.pkl"
+
+aws {
+  region = "us-east-1"
+
+  vpcs = new Listing {
+    new EC2.Vpc {
+      name = "dep-vpc"
+      cidrBlock = "10.0.0.0/16"
+      tags = new Mapping { ["Name"] = "dep-vpc" }
+    }
+  }
+
+  securityGroups = new Listing {
+    new EC2.SecurityGroup {
+      name = "dep-sg"
+      description = "Security group with dependency"
+      vpcId = vpcs[0].output("id") // Dependency!
+      ingress = new Listing {
+        new EC2.SecurityGroupRule {
+          protocol = "tcp"
+          fromPort = 22
+          toPort = 22
+          cidrBlocks = new Listing { "0.0.0.0/0" }
+        }
+      }
+    }
+  }
+}

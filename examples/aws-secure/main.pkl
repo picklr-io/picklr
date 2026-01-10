@@ -1,0 +1,41 @@
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/aws/CloudWatch.pkl"
+import "../../pkg/schemas/aws/KMS.pkl"
+
+aws {
+  region = "us-east-1"
+
+  keys = new Listing {
+    new KMS.Key {
+      description = "My Encryption Key"
+      enabled = true
+    }
+  }
+
+  aliases = new Listing {
+    new KMS.Alias {
+      aliasName = "alias/my-key"
+      targetKeyId = "key-123" // Mock ID
+    }
+  }
+
+  logGroups = new Listing {
+    new CloudWatch.LogGroup {
+      logGroupName = "/aws/lambda/my-func"
+      retentionInDays = 7
+    }
+  }
+
+  alarms = new Listing {
+    new CloudWatch.Alarm {
+      alarmName = "HighCPU"
+      metricName = "CPUUtilization"
+      namespace = "AWS/EC2"
+      threshold = 80.0
+      comparisonOperator = "GreaterThanThreshold"
+      evaluationPeriods = 2
+      period = 300
+      statistic = "Average"
+    }
+  }
+}

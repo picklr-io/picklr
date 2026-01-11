@@ -1,0 +1,72 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/Athena.pkl"
+import "../pkg/schemas/aws/Glue.pkl"
+import "../pkg/schemas/aws/Redshift.pkl"
+import "../pkg/schemas/aws/OpenSearch.pkl"
+
+aws {
+  region = "us-east-1"
+
+  workgroups = new Listing {
+    new Athena.Workgroup {
+      name = "my-test-workgroup"
+      description = "Test workgroup"
+      tags = new Mapping {
+        ["Env"] = "Test"
+      }
+    }
+  }
+
+  namedQueries = new Listing {
+    new Athena.NamedQuery {
+      name = "my-query"
+      database = "my_db"
+      queryString = "SELECT * FROM my_table"
+      workGroup = "my-test-workgroup"
+    }
+  }
+
+  catalogDatabases = new Listing {
+    new Glue.CatalogDatabase {
+      name = "my_test_glue_db"
+      description = "Test Glue Database"
+      locationUri = "s3://my-bucket/db"
+    }
+  }
+
+  crawlers = new Listing {
+    new Glue.Crawler {
+      name = "my-test-crawler"
+      databaseName = "my_test_glue_db"
+      role = "arn:aws:iam::123456789012:role/service-role/AWSGlueServiceRole-Test"
+      targets = new Mapping {
+        ["S3Targets"] = new Listing { "s3://my-bucket/data" }
+      }
+      tags = new Mapping {
+        ["Project"] = "Picklr"
+      }
+    }
+  }
+
+  redshiftClusters = new Listing {
+    new Redshift.Cluster {
+      clusterIdentifier = "my-redshift-cluster"
+      nodeType = "dc2.large"
+      clusterType = "single-node"
+      masterUsername = "adminuser"
+      masterUserPassword = "Password123!"
+      dbName = "mydb"
+    }
+  }
+
+  openSearchDomains = new Listing {
+    new OpenSearch.Domain {
+      domainName = "my-valid-domain" // Lowercase, no spaces
+      engineVersion = "OpenSearch_1.0"
+      tags = new Mapping {
+        ["Env"] = "Dev"
+      }
+    }
+  }
+}

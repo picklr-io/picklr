@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	"github.com/aws/aws-sdk-go-v2/service/appconfig"
+	"github.com/aws/aws-sdk-go-v2/service/athena"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/aws/aws-sdk-go-v2/service/codebuild"
 	"github.com/aws/aws-sdk-go-v2/service/codecommit"
@@ -16,8 +17,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/efs"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 	"github.com/aws/aws-sdk-go-v2/service/globalaccelerator"
+	"github.com/aws/aws-sdk-go-v2/service/glue"
 	"github.com/aws/aws-sdk-go-v2/service/kafka"
 	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/opensearch"
+	"github.com/aws/aws-sdk-go-v2/service/redshift"
 	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	"github.com/aws/aws-sdk-go-v2/service/xray"
 
@@ -68,6 +72,10 @@ type Provider struct {
 	kinesisClient           *kinesis.Client
 	kafkaClient             *kafka.Client
 	sfnClient               *sfn.Client
+	athenaClient            *athena.Client
+	glueClient              *glue.Client
+	redshiftClient          *redshift.Client
+	opensearchClient        *opensearch.Client
 	appconfigClient         *appconfig.Client
 
 	cloudwatchClient     *cloudwatch.Client
@@ -118,6 +126,10 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.kinesisClient = kinesis.NewFromConfig(cfg)
 	p.kafkaClient = kafka.NewFromConfig(cfg)
 	p.sfnClient = sfn.NewFromConfig(cfg)
+	p.athenaClient = athena.NewFromConfig(cfg)
+	p.glueClient = glue.NewFromConfig(cfg)
+	p.redshiftClient = redshift.NewFromConfig(cfg)
+	p.opensearchClient = opensearch.NewFromConfig(cfg)
 	p.appconfigClient = appconfig.NewFromConfig(cfg)
 
 	p.cloudwatchClient = cloudwatch.NewFromConfig(cfg)
@@ -373,6 +385,24 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyAppConfigEnvironment(ctx, req)
 	case "aws:AppConfig.ConfigurationProfile":
 		return p.applyAppConfigProfile(ctx, req)
+	case "aws:Athena.Workgroup":
+		return p.applyWorkgroup(ctx, req)
+	case "aws:Athena.NamedQuery":
+		return p.applyNamedQuery(ctx, req)
+	case "aws:Glue.CatalogDatabase":
+		return p.applyCatalogDatabase(ctx, req)
+	case "aws:Glue.Crawler":
+		return p.applyCrawler(ctx, req)
+	case "aws:Glue.Job":
+		return p.applyJob(ctx, req)
+	case "aws:Glue.Trigger":
+		return p.applyTrigger(ctx, req)
+	case "aws:Redshift.Cluster":
+		return p.applyRedshiftCluster(ctx, req)
+	case "aws:Redshift.SubnetGroup":
+		return p.applyRedshiftSubnetGroup(ctx, req)
+	case "aws:OpenSearch.Domain":
+		return p.applyOpenSearchDomain(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)

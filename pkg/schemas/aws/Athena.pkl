@@ -1,0 +1,51 @@
+module picklr.aws.Athena
+
+import "../Resource.pkl"
+
+/// An Athena Workgroup.
+class Workgroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the workgroup.
+  name: String
+
+  /// The description of the workgroup.
+  description: String?
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["description"] = description
+    ["tags"] = tags
+  }
+}
+
+/// An Athena Named Query.
+class NamedQuery extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the query.
+  name: String
+
+  /// The name of the workgroup.
+  workGroup: String?
+
+  /// The database to which the query belongs.
+  database: String
+
+  /// The query string.
+  queryString: String
+
+  /// The description of the query.
+  description: String?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["work_group"] = workGroup
+    ["database"] = database
+    ["query_string"] = queryString
+    ["description"] = description
+  }
+}

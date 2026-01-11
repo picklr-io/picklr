@@ -1,0 +1,31 @@
+module picklr.aws.OpenSearch
+
+import "../Resource.pkl"
+
+/// An OpenSearch Domain.
+class Domain extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the domain.
+  domainName: String
+
+  /// The OpenSearch version.
+  engineVersion: String?
+
+  /// The cluster configuration.
+  clusterConfig: Mapping<String, Any>?
+
+  /// The EBS options.
+  ebsOptions: Mapping<String, Any>?
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["domain_name"] = domainName
+    ["engine_version"] = engineVersion
+    ["cluster_config"] = clusterConfig
+    ["ebs_options"] = ebsOptions
+    ["tags"] = tags
+  }
+}

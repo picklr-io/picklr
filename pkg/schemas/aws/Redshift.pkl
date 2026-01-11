@@ -1,0 +1,71 @@
+module picklr.aws.Redshift
+
+import "../Resource.pkl"
+
+/// A Redshift Cluster.
+class Cluster extends Resource.Resource {
+  provider = "aws"
+
+  /// The unique identifier for the cluster.
+  clusterIdentifier: String
+
+  /// The name of the database.
+  dbName: String?
+
+  /// The node type for the nodes in the cluster.
+  nodeType: String
+
+  /// The type of the cluster.
+  clusterType: String // single-node or multi-node
+
+  /// The number of compute nodes in the cluster.
+  numberOfNodes: Int?
+
+  /// The master user name.
+  masterUsername: String
+
+  /// The master password.
+  masterUserPassword: String
+
+  /// The name of the cluster subnet group.
+  clusterSubnetGroupName: String?
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["cluster_identifier"] = clusterIdentifier
+    ["db_name"] = dbName
+    ["node_type"] = nodeType
+    ["cluster_type"] = clusterType
+    ["number_of_nodes"] = numberOfNodes
+    ["master_username"] = masterUsername
+    ["master_user_password"] = masterUserPassword
+    ["cluster_subnet_group_name"] = clusterSubnetGroupName
+    ["tags"] = tags
+  }
+}
+
+/// A Redshift Subnet Group.
+class SubnetGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the cluster subnet group.
+  clusterSubnetGroupName: String
+
+  /// The description of the cluster subnet group.
+  description: String?
+
+  /// A list of subnet IDs.
+  subnetIds: Listing<String>
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["cluster_subnet_group_name"] = clusterSubnetGroupName
+    ["description"] = description
+    ["subnet_ids"] = subnetIds
+    ["tags"] = tags
+  }
+}

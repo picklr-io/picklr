@@ -1,0 +1,99 @@
+module picklr.aws.Glue
+
+import "../Resource.pkl"
+
+/// A Glue Catalog Database.
+class CatalogDatabase extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the database.
+  name: String
+
+  /// The description of the database.
+  description: String?
+
+  /// The location URI of the database.
+  locationUri: String?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["description"] = description
+    ["location_uri"] = locationUri
+  }
+}
+
+/// A Glue Crawler.
+class Crawler extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the crawler.
+  name: String
+
+  /// The name of the database to which the crawler belongs.
+  databaseName: String
+
+  /// The IAM role (or ARN) used by the crawler.
+  role: String
+
+  /// A list of targets for the crawler.
+  targets: Mapping<String, Any> // Simplified for flexibility
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["database_name"] = databaseName
+    ["role"] = role
+    ["targets"] = targets
+    ["tags"] = tags
+  }
+}
+
+/// A Glue Job.
+class Job extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the job.
+  name: String
+
+  /// The role ARN.
+  role: String
+
+  /// The command definition.
+  command: Mapping<String, String>
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["role"] = role
+    ["command"] = command
+    ["tags"] = tags
+  }
+}
+
+/// A Glue Trigger.
+class Trigger extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the trigger.
+  name: String
+
+  /// The type of trigger.
+  type: String = "ON_DEMAND"
+
+  /// The actions initiated by this trigger.
+  actions: Listing<Mapping<String, Any>>
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["type"] = type
+    ["actions"] = actions
+    ["tags"] = tags
+  }
+}

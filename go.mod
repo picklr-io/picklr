@@ -53,7 +53,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.17 // indirect
 	github.com/aws/aws-sdk-go-v2/service/appconfig v1.43.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/athena v1.56.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/globalaccelerator v1.35.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/glue v1.136.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.9.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.16 // indirect
@@ -61,6 +63,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.16 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kafka v1.46.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/kinesis v1.42.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/opensearch v1.57.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/redshift v1.61.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sfn v1.40.6 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.0.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.30.8 // indirect

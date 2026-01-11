@@ -26,6 +26,10 @@ import "CodeBuild.pkl"
 import "CodePipeline.pkl"
 import "CodeDeploy.pkl"
 import "CodeCommit.pkl"
+import "Athena.pkl"
+import "Glue.pkl"
+import "Redshift.pkl"
+import "OpenSearch.pkl"
 import "StepFunctions.pkl"
 import "AppConfig.pkl"
 import "GlobalAccelerator.pkl"
@@ -231,6 +235,33 @@ class Config {
   /// List of AppConfig Configuration Profiles.
   appConfigProfiles: Listing<AppConfig.ConfigurationProfile>?
 
+  /// List of Athena Workgroups.
+  workgroups: Listing<Athena.Workgroup>?
+
+  /// List of Athena Named Queries.
+  namedQueries: Listing<Athena.NamedQuery>?
+
+  /// List of Glue Catalog Databases.
+  catalogDatabases: Listing<Glue.CatalogDatabase>?
+
+  /// List of Glue Crawlers.
+  crawlers: Listing<Glue.Crawler>?
+
+  /// List of Glue Jobs.
+  jobs: Listing<Glue.Job>?
+
+  /// List of Glue Triggers.
+  triggers: Listing<Glue.Trigger>?
+
+  /// List of Redshift Clusters.
+  redshiftClusters: Listing<Redshift.Cluster>?
+
+  /// List of Redshift Subnet Groups.
+  redshiftSubnetGroups: Listing<Redshift.SubnetGroup>?
+
+  /// List of OpenSearch Domains.
+  openSearchDomains: Listing<OpenSearch.Domain>?
+
   /// List of CloudFront Distributions.
   distributions: Listing<CloudFront.Distribution>?
 
@@ -423,5 +454,14 @@ class Config {
     ...(if (appConfigApplications != null) appConfigApplications else new Listing {})
     ...(if (appConfigEnvironments != null) appConfigEnvironments else new Listing {})
     ...(if (appConfigProfiles != null) appConfigProfiles else new Listing {})
+    ...(if (workgroups != null) workgroups else new Listing {})
+    ...(if (namedQueries != null) namedQueries else new Listing {})
+    ...(if (catalogDatabases != null) catalogDatabases else new Listing {})
+    ...(if (crawlers != null) crawlers else new Listing {})
+    ...(if (jobs != null) jobs else new Listing {})
+    ...(if (triggers != null) triggers else new Listing {})
+    ...(if (redshiftClusters != null) redshiftClusters else new Listing {})
+    ...(if (redshiftSubnetGroups != null) redshiftSubnetGroups else new Listing {})
+    ...(if (openSearchDomains != null) openSearchDomains else new Listing {})
   }
 }

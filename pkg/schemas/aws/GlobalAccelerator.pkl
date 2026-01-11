@@ -1,0 +1,113 @@
+module picklr.aws.GlobalAccelerator
+
+import "../Resource.pkl"
+
+/// A Global Accelerator Accelerator.
+class Accelerator extends Resource.Resource {
+    provider = "aws"
+
+    /// The name of the accelerator.
+    name: String
+
+    /// The IP address type. IPV4 or DUAL_STACK.
+    ipAddressType: String = "IPV4"
+
+    /// Indicates whether the accelerator is enabled.
+    enabled: Boolean = true
+
+    /// Tags.
+    tags: Mapping<String, String>?
+
+    properties = new Mapping {
+        ["name"] = name
+        ["ip_address_type"] = ipAddressType
+        ["enabled"] = enabled
+        ["tags"] = tags
+    }
+}
+
+/// A Global Accelerator Listener.
+class Listener extends Resource.Resource {
+    provider = "aws"
+
+    /// The ARN of the accelerator.
+    acceleratorArn: String
+
+    /// The protocol for connections to the accelerator. TCP or UDP.
+    protocol: String = "TCP"
+
+    /// The list of port ranges.
+    portRanges: Listing<PortRange>
+
+    /// Client affinity. NONE or SOURCE_IP.
+    clientAffinity: String = "NONE"
+
+    properties = new Mapping {
+        ["accelerator_arn"] = acceleratorArn
+        ["protocol"] = protocol
+        ["port_ranges"] = portRanges.toList().map((p) -> new Mapping {
+            ["from_port"] = p.fromPort
+            ["to_port"] = p.toPort
+        })
+        ["client_affinity"] = clientAffinity
+    }
+}
+
+class PortRange {
+    fromPort: Int
+    toPort: Int
+}
+
+/// A Global Accelerator Endpoint Group.
+class EndpointGroup extends Resource.Resource {
+    provider = "aws"
+
+    /// The ARN of the listener.
+    listenerArn: String
+
+    /// The AWS Region where the endpoint group is located.
+    endpointGroupRegion: String
+
+    /// The list of endpoint objects.
+    endpointConfigurations: Listing<EndpointConfiguration>?
+
+    /// The percentage of traffic to send to this endpoint group.
+    trafficDialPercentage: Float = 100.0
+
+    /// The port that Global Accelerator uses to check the health of endpoints.
+    healthCheckPort: Int?
+
+    /// The protocol that Global Accelerator uses to check the health of endpoints.
+    healthCheckProtocol: String? // TCP, HTTP, HTTPS
+
+    /// The path that Global Accelerator uses to check health (HTTP/HTTPS).
+    healthCheckPath: String?
+
+    properties = new Mapping {
+        ["listener_arn"] = listenerArn
+        ["endpoint_group_region"] = endpointGroupRegion
+        ["endpoint_configurations"] = 
+            if (endpointConfigurations != null)
+                endpointConfigurations.toList().map((e) -> new Mapping {
+                    ["endpoint_id"] = e.endpointId
+                    ["weight"] = e.weight
+                    ["client_ip_preservation_enabled"] = e.clientIPPreservationEnabled
+                })
+            else null
+        ["traffic_dial_percentage"] = trafficDialPercentage
+        ["health_check_port"] = healthCheckPort
+        ["health_check_protocol"] = healthCheckProtocol
+        ["health_check_path"] = healthCheckPath
+    }
+}
+
+class EndpointConfiguration {
+    /// The ID of an endpoint resource (e.g., ALB ARN).
+    endpointId: String
+
+    /// The weight associated with the endpoint.
+    weight: Int = 128
+
+    /// Indicates whether client IP preservation is enabled.
+    clientIPPreservationEnabled: Boolean = false
+}

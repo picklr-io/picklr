@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
+	"github.com/aws/aws-sdk-go-v2/service/appconfig"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
 	"github.com/aws/aws-sdk-go-v2/service/codebuild"
 	"github.com/aws/aws-sdk-go-v2/service/codecommit"
@@ -14,6 +15,10 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/efs"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
+	"github.com/aws/aws-sdk-go-v2/service/globalaccelerator"
+	"github.com/aws/aws-sdk-go-v2/service/kafka"
+	"github.com/aws/aws-sdk-go-v2/service/kinesis"
+	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	"github.com/aws/aws-sdk-go-v2/service/xray"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
@@ -40,25 +45,30 @@ import (
 
 type Provider struct {
 	pb.UnimplementedProviderServer
-	s3Client          *s3.Client
-	ec2Client         *ec2.Client
-	iamClient         *iam.Client
-	lambdaClient      *lambda.Client
-	dynamodbClient    *dynamodb.Client
-	rdsClient         *rds.Client
-	sqsClient         *sqs.Client
-	snsClient         *sns.Client
-	ecrClient         *ecr.Client
-	ecsClient         *ecs.Client
-	elbv2Client       *elasticloadbalancingv2.Client
-	route53Client     *route53.Client
-	apigatewayClient  *apigateway.Client
-	autoscalingClient *autoscaling.Client
-	acmClient         *acm.Client
-	cloudfrontClient  *cloudfront.Client
-	eventbridgeClient *eventbridge.Client
-	efsClient         *efs.Client
-	xrayClient        *xray.Client
+	s3Client                *s3.Client
+	ec2Client               *ec2.Client
+	iamClient               *iam.Client
+	lambdaClient            *lambda.Client
+	dynamodbClient          *dynamodb.Client
+	rdsClient               *rds.Client
+	sqsClient               *sqs.Client
+	snsClient               *sns.Client
+	ecrClient               *ecr.Client
+	ecsClient               *ecs.Client
+	elbv2Client             *elasticloadbalancingv2.Client
+	route53Client           *route53.Client
+	apigatewayClient        *apigateway.Client
+	autoscalingClient       *autoscaling.Client
+	acmClient               *acm.Client
+	cloudfrontClient        *cloudfront.Client
+	eventbridgeClient       *eventbridge.Client
+	efsClient               *efs.Client
+	xrayClient              *xray.Client
+	globalacceleratorClient *globalaccelerator.Client
+	kinesisClient           *kinesis.Client
+	kafkaClient             *kafka.Client
+	sfnClient               *sfn.Client
+	appconfigClient         *appconfig.Client
 
 	cloudwatchClient     *cloudwatch.Client
 	cloudwatchlogsClient *cloudwatchlogs.Client
@@ -104,6 +114,11 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.eventbridgeClient = eventbridge.NewFromConfig(cfg)
 	p.efsClient = efs.NewFromConfig(cfg)
 	p.xrayClient = xray.NewFromConfig(cfg)
+	p.globalacceleratorClient = globalaccelerator.NewFromConfig(cfg)
+	p.kinesisClient = kinesis.NewFromConfig(cfg)
+	p.kafkaClient = kafka.NewFromConfig(cfg)
+	p.sfnClient = sfn.NewFromConfig(cfg)
+	p.appconfigClient = appconfig.NewFromConfig(cfg)
 
 	p.cloudwatchClient = cloudwatch.NewFromConfig(cfg)
 	p.cloudwatchlogsClient = cloudwatchlogs.NewFromConfig(cfg)
@@ -234,6 +249,8 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyHostedZone(ctx, req)
 	case "aws:Route53.RecordSet":
 		return p.applyRecordSet(ctx, req)
+	case "aws:Route53.HealthCheck":
+		return p.applyHealthCheck(ctx, req)
 	case "aws:APIGateway.RestApi":
 		return p.applyRestApi(ctx, req)
 	case "aws:APIGateway.ApiResource":
@@ -336,6 +353,26 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyXRayGroup(ctx, req)
 	case "aws:XRay.SamplingRule":
 		return p.applySamplingRule(ctx, req)
+	case "aws:GlobalAccelerator.Accelerator":
+		return p.applyAccelerator(ctx, req)
+	case "aws:GlobalAccelerator.Listener":
+		return p.applyGlobalAcceleratorListener(ctx, req)
+	case "aws:GlobalAccelerator.EndpointGroup":
+		return p.applyEndpointGroup(ctx, req)
+	case "aws:Kinesis.Stream":
+		return p.applyStream(ctx, req)
+	case "aws:MSK.Cluster":
+		return p.applyMSKCluster(ctx, req)
+	case "aws:APIGateway.Integration":
+		return p.applyIntegration(ctx, req)
+	case "aws:StepFunctions.StateMachine":
+		return p.applyStateMachine(ctx, req)
+	case "aws:AppConfig.Application":
+		return p.applyAppConfigApplication(ctx, req)
+	case "aws:AppConfig.Environment":
+		return p.applyAppConfigEnvironment(ctx, req)
+	case "aws:AppConfig.ConfigurationProfile":
+		return p.applyAppConfigProfile(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)

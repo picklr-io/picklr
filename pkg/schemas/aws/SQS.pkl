@@ -15,9 +15,33 @@ class Queue extends Resource.Resource {
   /// The message retention period for the queue, in seconds.
   messageRetentionPeriod: Int = 345600
 
-  properties = new {
+  /// The delay in seconds that the delivery of all messages in the queue will be delayed.
+  delaySeconds: Int = 0
+
+  /// The length of time, in seconds, for which the ReceiveMessage action waits for a message to arrive.
+  receiveMessageWaitTimeSeconds: Int = 0
+
+  /// Designates a queue as FIFO.
+  fifoQueue: Boolean = false
+
+  /// Enables content-based deduplication (FIFO only).
+  contentBasedDeduplication: Boolean = false
+
+  /// The string that includes the parameters for the dead-letter queue functionality.
+  redrivePolicy: String?
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
     ["queue_name"] = queueName
     ["visibility_timeout"] = visibilityTimeout
     ["message_retention_period"] = messageRetentionPeriod
+    ["delay_seconds"] = delaySeconds
+    ["receive_message_wait_time_seconds"] = receiveMessageWaitTimeSeconds
+    ["fifo_queue"] = fifoQueue
+    ["content_based_deduplication"] = contentBasedDeduplication
+    ["redrive_policy"] = redrivePolicy
+    ["tags"] = tags
   }
 }

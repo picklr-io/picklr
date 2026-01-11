@@ -62,6 +62,38 @@ class Method extends Resource.Resource {
   }
 }
 
+/// An API Gateway Integration.
+class Integration extends Resource.Resource {
+  provider = "aws"
+
+  /// The ID of the REST API.
+  restApiId: String
+
+  /// The ID of the resource.
+  resourceId: String
+
+  /// The HTTP method.
+  httpMethod: String
+
+  /// The type of integration (e.g., HTTP, AWS, MOCK, HTTP_PROXY, AWS_PROXY).
+  type: String
+
+  /// The HTTP method for the integration.
+  integrationHttpMethod: String?
+
+  /// The URI of the integration endpoint.
+  uri: String?
+
+  properties = new Mapping {
+    ["rest_api_id"] = restApiId
+    ["resource_id"] = resourceId
+    ["http_method"] = httpMethod
+    ["type"] = type
+    ["integration_http_method"] = integrationHttpMethod
+    ["uri"] = uri
+  }
+}
+
 /// An API Gateway Deployment.
 class Deployment extends Resource.Resource {
   provider = "aws"

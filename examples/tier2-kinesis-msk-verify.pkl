@@ -1,0 +1,40 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/Kinesis.pkl"
+import "../pkg/schemas/aws/MSK.pkl"
+import "../pkg/schemas/aws/EC2.pkl"
+
+aws {
+  region = "us-east-1"
+
+  streams = new Listing {
+    new Kinesis.Stream {
+      name = "my-test-stream"
+      shardCount = 2
+      streamModeDetails = new Mapping {
+        ["StreamMode"] = "PROVISIONED"
+      }
+      retentionPeriodHours = 48
+      tags = new Mapping {
+        ["Env"] = "Test"
+      }
+    }
+  }
+  
+  // Dummy VPC required for MSK often, or at least subnets/SGs refs
+  mskClusters = new Listing {
+    new MSK.Cluster {
+      clusterName = "my-msk-cluster"
+      kafkaVersion = "2.8.1"
+      numberOfBrokerNodes = 2
+      brokerNodeGroupInfo = new Mapping {
+        ["InstanceType"] = "kafka.m5.large"
+        ["ClientSubnets"] = new Listing { "subnet-123" }
+        ["SecurityGroups"] = new Listing { "sg-123" }
+      }
+      tags = new Mapping {
+        ["Project"] = "Picklr"
+      }
+    }
+  }
+}

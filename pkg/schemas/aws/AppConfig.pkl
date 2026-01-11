@@ -1,0 +1,63 @@
+module picklr.aws.AppConfig
+
+import "../Resource.pkl"
+
+/// An AppConfig Application.
+class Application extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the application.
+  name: String
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["tags"] = tags
+  }
+}
+
+/// An AppConfig Environment.
+class Environment extends Resource.Resource {
+  provider = "aws"
+
+  /// The application ID.
+  applicationId: String
+
+  /// The name of the environment.
+  name: String
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["application_id"] = applicationId
+    ["name"] = name
+    ["tags"] = tags
+  }
+}
+
+/// An AppConfig Configuration Profile.
+class ConfigurationProfile extends Resource.Resource {
+  provider = "aws"
+
+  /// The application ID.
+  applicationId: String
+
+  /// The name of the configuration profile.
+  name: String
+
+  /// The URI location of the configuration.
+  locationUri: String
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["application_id"] = applicationId
+    ["name"] = name
+    ["location_uri"] = locationUri
+    ["tags"] = tags
+  }
+}

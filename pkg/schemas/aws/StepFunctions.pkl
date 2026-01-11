@@ -1,0 +1,31 @@
+module picklr.aws.StepFunctions
+
+import "../Resource.pkl"
+
+/// A Step Functions State Machine.
+class StateMachine extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the state machine.
+  name: String
+
+  /// The Amazon States Language definition of the state machine.
+  definition: String
+
+  /// The Amazon Resource Name (ARN) of the IAM role to use for this state machine.
+  roleArn: String
+
+  /// The type of state machine.
+  type: String = "STANDARD" // STANDARD or EXPRESS
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["definition"] = definition
+    ["role_arn"] = roleArn
+    ["type"] = type
+    ["tags"] = tags
+  }
+}

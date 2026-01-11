@@ -15,6 +15,9 @@ class Distribution extends Resource.Resource {
   /// Default cache behavior.
   defaultCacheBehavior: DefaultCacheBehavior
 
+  /// Ordered cache behaviors (for path-based routing).
+  orderedCacheBehaviors: Listing<OrderedCacheBehavior>?
+
   /// Origins.
   origins: Listing<Origin>
 
@@ -26,6 +29,18 @@ class Distribution extends Resource.Resource {
       ["viewer_protocol_policy"] = defaultCacheBehavior.viewerProtocolPolicy
       ["allowed_methods"] = defaultCacheBehavior.allowedMethods
     }
+    ["ordered_cache_behaviors"] = 
+      if (orderedCacheBehaviors != null)
+        orderedCacheBehaviors
+          .toList()
+          .map((cb) -> new Mapping {
+            ["path_pattern"] = cb.pathPattern
+            ["target_origin_id"] = cb.targetOriginId
+            ["viewer_protocol_policy"] = cb.viewerProtocolPolicy
+            ["allowed_methods"] = cb.allowedMethods
+          })
+      else null
+
     ["origins"] =
       origins
         .toList()
@@ -37,6 +52,13 @@ class Distribution extends Resource.Resource {
 }
 
 class DefaultCacheBehavior {
+  targetOriginId: String
+  viewerProtocolPolicy: String = "allow-all"
+  allowedMethods: Listing<String> = new Listing { "GET"; "HEAD" }
+}
+
+class OrderedCacheBehavior {
+  pathPattern: String
   targetOriginId: String
   viewerProtocolPolicy: String = "allow-all"
   allowedMethods: Listing<String> = new Listing { "GET"; "HEAD" }

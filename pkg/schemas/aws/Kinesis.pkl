@@ -1,0 +1,31 @@
+module picklr.aws.Kinesis
+
+import "../Resource.pkl"
+
+/// A Kinesis Data Stream.
+class Stream extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the stream.
+  name: String
+
+  /// The number of shards that the stream will use.
+  shardCount: Int?
+
+  /// The mode in which the stream is running.
+  streamModeDetails: Mapping<String, String>? // ON_DEMAND or PROVISIONED
+
+  /// The number of hours for the data records that are stored in shards to remain accessible.
+  retentionPeriodHours: Int = 24
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["name"] = name
+    ["shard_count"] = shardCount
+    ["stream_mode_details"] = streamModeDetails
+    ["retention_period_hours"] = retentionPeriodHours
+    ["tags"] = tags
+  }
+}

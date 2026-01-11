@@ -31,7 +31,10 @@ class RecordSet extends Resource.Resource {
   zoneId: String
 
   /// List of records.
-  records: Listing<String>
+  records: Listing<String>?
+
+  /// Alias resource record sets only.
+  alias: Mapping<String, Any>?
 
   properties = new Mapping {
     ["name"] = name
@@ -39,5 +42,41 @@ class RecordSet extends Resource.Resource {
     ["type"] = type
     ["zone_id"] = zoneId
     ["records"] = records
+    ["alias"] = alias
+  }
+}
+
+/// A Route53 Health Check.
+class HealthCheck extends Resource.Resource {
+  provider = "aws"
+
+  /// The IP address of the endpoint to check.
+  ipAddress: String?
+
+  /// The port on the endpoint to check.
+  port: Int?
+
+  /// The type of health check to perform.
+  type: String // HTTP, HTTPS, HTTP_STR_MATCH, HTTPS_STR_MATCH, TCP, CALCULATED, CLOUDWATCH_METRIC, RECOVERY_CONTROL
+
+  /// The path to check (for HTTP/HTTPS).
+  resourcePath: String?
+
+  /// The fully qualified domain name of the endpoint to check.
+  fullyQualifiedDomainName: String?
+
+  /// The number of consecutive health checks that an endpoint must pass or fail.
+  failureThreshold: Int = 3
+
+  /// The 18-character ID of the health check.
+  id: String?
+
+  properties = new Mapping {
+    ["ip_address"] = ipAddress
+    ["port"] = port
+    ["type"] = type
+    ["resource_path"] = resourcePath
+    ["fully_qualified_domain_name"] = fullyQualifiedDomainName
+    ["failure_threshold"] = failureThreshold
   }
 }

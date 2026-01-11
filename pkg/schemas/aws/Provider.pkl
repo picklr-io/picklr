@@ -26,10 +26,21 @@ import "CodeBuild.pkl"
 import "CodePipeline.pkl"
 import "CodeDeploy.pkl"
 import "CodeCommit.pkl"
+import "StepFunctions.pkl"
+import "AppConfig.pkl"
+import "GlobalAccelerator.pkl"
+import "Kinesis.pkl"
+import "MSK.pkl"
 import "XRay.pkl"
 
 /// Configuration for the AWS Provider.
 class Config {
+  /// List of Kinesis Streams.
+  streams: Listing<Kinesis.Stream>?
+
+  /// List of MSK Clusters.
+  mskClusters: Listing<MSK.Cluster>?
+
   /// The region where AWS operations will take place. Examples are us-east-1, us-west-2, etc.
   region: String
 
@@ -190,6 +201,9 @@ class Config {
   /// List of Route53 Record Sets.
   recordSets: Listing<Route53.RecordSet>?
 
+  /// List of Route53 Health Checks.
+  healthChecks: Listing<Route53.HealthCheck>?
+
   /// List of API Gateway REST APIs.
   restApis: Listing<APIGateway.RestApi>?
 
@@ -199,8 +213,23 @@ class Config {
   /// List of API Gateway Methods.
   methods: Listing<APIGateway.Method>?
 
+  /// List of API Gateway Integrations.
+  integrations: Listing<APIGateway.Integration>?
+
   /// List of API Gateway Deployments.
   deployments: Listing<APIGateway.Deployment>?
+
+  /// List of Step Functions State Machines.
+  stateMachines: Listing<StepFunctions.StateMachine>?
+
+  /// List of AppConfig Applications.
+  appConfigApplications: Listing<AppConfig.Application>?
+
+  /// List of AppConfig Environments.
+  appConfigEnvironments: Listing<AppConfig.Environment>?
+
+  /// List of AppConfig Configuration Profiles.
+  appConfigProfiles: Listing<AppConfig.ConfigurationProfile>?
 
   /// List of CloudFront Distributions.
   distributions: Listing<CloudFront.Distribution>?
@@ -267,6 +296,15 @@ class Config {
 
   /// List of EventBridge Targets.
   targets: Listing<EventBridge.Target>?
+
+  /// List of Global Accelerator Accelerators.
+  accelerators: Listing<GlobalAccelerator.Accelerator>?
+
+  /// List of Global Accelerator Listeners.
+  globalAcceleratorListeners: Listing<GlobalAccelerator.Listener>?
+
+  /// List of Global Accelerator Endpoint Groups.
+  endpointGroups: Listing<GlobalAccelerator.EndpointGroup>?
 
   /// List of EFS File Systems.
   fileSystems: Listing<EFS.FileSystem>?
@@ -352,6 +390,7 @@ class Config {
     ...(if (listenerRules != null) listenerRules else new Listing {})
     ...(if (hostedZones != null) hostedZones else new Listing {})
     ...(if (recordSets != null) recordSets else new Listing {})
+    ...(if (healthChecks != null) healthChecks else new Listing {})
     ...(if (restApis != null) restApis else new Listing {})
     ...(if (apiResources != null) apiResources else new Listing {})
     ...(if (methods != null) methods else new Listing {})
@@ -374,5 +413,15 @@ class Config {
     ...(if (bucketNotifications != null) bucketNotifications else new Listing {})
     ...(if (xrayGroups != null) xrayGroups else new Listing {})
     ...(if (samplingRules != null) samplingRules else new Listing {})
+    ...(if (accelerators != null) accelerators else new Listing {})
+    ...(if (globalAcceleratorListeners != null) globalAcceleratorListeners else new Listing {})
+    ...(if (endpointGroups != null) endpointGroups else new Listing {})
+    ...(if (streams != null) streams else new Listing {})
+    ...(if (mskClusters != null) mskClusters else new Listing {})
+    ...(if (integrations != null) integrations else new Listing {})
+    ...(if (stateMachines != null) stateMachines else new Listing {})
+    ...(if (appConfigApplications != null) appConfigApplications else new Listing {})
+    ...(if (appConfigEnvironments != null) appConfigEnvironments else new Listing {})
+    ...(if (appConfigProfiles != null) appConfigProfiles else new Listing {})
   }
 }

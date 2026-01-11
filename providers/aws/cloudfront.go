@@ -12,13 +12,21 @@ import (
 )
 
 type DistributionConfig struct {
-	Enabled              bool                 `json:"enabled"`
-	PriceClass           string               `json:"price_class"`
-	DefaultCacheBehavior DefaultCacheBehavior `json:"default_cache_behavior"`
-	Origins              []Origin             `json:"origins"`
+	Enabled               bool                   `json:"enabled"`
+	PriceClass            string                 `json:"price_class"`
+	DefaultCacheBehavior  DefaultCacheBehavior   `json:"default_cache_behavior"`
+	OrderedCacheBehaviors []OrderedCacheBehavior `json:"ordered_cache_behaviors"`
+	Origins               []Origin               `json:"origins"`
 }
 
 type DefaultCacheBehavior struct {
+	TargetOriginID       string   `json:"target_origin_id"`
+	ViewerProtocolPolicy string   `json:"viewer_protocol_policy"`
+	AllowedMethods       []string `json:"allowed_methods"`
+}
+
+type OrderedCacheBehavior struct {
+	PathPattern          string   `json:"path_pattern"`
 	TargetOriginID       string   `json:"target_origin_id"`
 	ViewerProtocolPolicy string   `json:"viewer_protocol_policy"`
 	AllowedMethods       []string `json:"allowed_methods"`
@@ -55,6 +63,8 @@ func (p *Provider) applyDistribution(ctx context.Context, req *pb.ApplyRequest) 
 				IfMatch: &prior.ETag,
 			})
 			if err != nil {
+				// If error is DistributionNotDisabled, we should disable first.
+				// For now, logging error.
 				return nil, fmt.Errorf("failed to delete distribution: %w", err)
 			}
 		}
@@ -80,9 +90,43 @@ func (p *Provider) applyDistribution(ctx context.Context, req *pb.ApplyRequest) 
 	}
 
 	// Prepare AllowedMethods slice
-	var methods []types.Method
-	for _, m := range desired.DefaultCacheBehavior.AllowedMethods {
-		methods = append(methods, types.Method(m))
+	allowedMethodsFromStrings := func(input []string) []types.Method {
+		var methods []types.Method
+		for _, m := range input {
+			methods = append(methods, types.Method(m))
+		}
+		return methods
+	}
+	defaultMethods := allowedMethodsFromStrings(desired.DefaultCacheBehavior.AllowedMethods)
+
+	// Prepare OrderedCacheBehaviors
+	var cacheBehaviors []types.CacheBehavior
+	for _, cb := range desired.OrderedCacheBehaviors {
+		cbMethods := allowedMethodsFromStrings(cb.AllowedMethods)
+		cacheBehaviors = append(cacheBehaviors, types.CacheBehavior{
+			PathPattern:          &cb.PathPattern,
+			TargetOriginId:       &cb.TargetOriginID,
+			ViewerProtocolPolicy: types.ViewerProtocolPolicy(cb.ViewerProtocolPolicy),
+			AllowedMethods: &types.AllowedMethods{
+				Quantity: func(i int32) *int32 { return &i }(int32(len(cbMethods))),
+				Items:    cbMethods,
+				CachedMethods: &types.CachedMethods{
+					Quantity: func(i int32) *int32 { return &i }(int32(2)),
+					Items:    []types.Method{types.MethodGet, types.MethodHead},
+				},
+			},
+			MinTTL: func(i int64) *int64 { return &i }(0),
+			ForwardedValues: &types.ForwardedValues{
+				Cookies: &types.CookiePreference{
+					Forward: types.ItemSelectionNone,
+				},
+				QueryString: func(b bool) *bool { return &b }(false),
+			},
+			TrustedSigners: &types.TrustedSigners{
+				Enabled:  func(b bool) *bool { return &b }(false),
+				Quantity: func(i int32) *int32 { return &i }(0),
+			},
+		})
 	}
 
 	callerRef := fmt.Sprintf("picklr-%d", time.Now().UnixNano())
@@ -99,8 +143,8 @@ func (p *Provider) applyDistribution(ctx context.Context, req *pb.ApplyRequest) 
 				TargetOriginId:       &desired.DefaultCacheBehavior.TargetOriginID,
 				ViewerProtocolPolicy: types.ViewerProtocolPolicy(desired.DefaultCacheBehavior.ViewerProtocolPolicy),
 				AllowedMethods: &types.AllowedMethods{
-					Quantity: func(i int32) *int32 { return &i }(int32(len(methods))),
-					Items:    methods,
+					Quantity: func(i int32) *int32 { return &i }(int32(len(defaultMethods))),
+					Items:    defaultMethods,
 					CachedMethods: &types.CachedMethods{
 						Quantity: func(i int32) *int32 { return &i }(int32(2)),
 						Items:    []types.Method{types.MethodGet, types.MethodHead},
@@ -113,6 +157,10 @@ func (p *Provider) applyDistribution(ctx context.Context, req *pb.ApplyRequest) 
 					},
 					QueryString: func(b bool) *bool { return &b }(false),
 				},
+			},
+			CacheBehaviors: &types.CacheBehaviors{
+				Quantity: func(i int32) *int32 { return &i }(int32(len(cacheBehaviors))),
+				Items:    cacheBehaviors,
 			},
 			Comment: func(s string) *string { return &s }("Created by Picklr"),
 		},

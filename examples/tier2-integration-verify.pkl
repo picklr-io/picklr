@@ -1,0 +1,80 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/StepFunctions.pkl"
+import "../pkg/schemas/aws/AppConfig.pkl"
+import "../pkg/schemas/aws/APIGateway.pkl"
+
+aws {
+  region = "us-east-1"
+
+  stateMachines = new Listing {
+    new StepFunctions.StateMachine {
+      name = "my-test-state-machine"
+      definition = "{\"StartAt\":\"HelloWorld\",\"States\":{\"HelloWorld\":{\"Type\":\"Pass\",\"End\":true}}}"
+      roleArn = "arn:aws:iam::123456789012:role/service-role/Role"
+      type = "STANDARD"
+      tags = new Mapping {
+        ["Env"] = "Test"
+      }
+    }
+  }
+
+  appConfigApplications = new Listing {
+    new AppConfig.Application {
+      name = "my-app-config"
+      tags = new Mapping {
+        ["Project"] = "Picklr"
+      }
+    }
+  }
+
+  appConfigEnvironments = new Listing {
+    new AppConfig.Environment {
+      name = "my-env"
+      applicationId = "my-app-id" // In real usage this would be a reference
+    }
+  }
+
+  appConfigProfiles = new Listing {
+    new AppConfig.ConfigurationProfile {
+      name = "my-profile"
+      applicationId = "my-app-id"
+      locationUri = "hosted"
+    }
+  }
+
+  // APIGateway Integration
+  restApis = new Listing {
+    new APIGateway.RestApi {
+      name = "my-api"
+    }
+  }
+
+  apiResources = new Listing {
+    new APIGateway.ApiResource {
+      restApiId = "api-id"
+      parentId = "parent-id"
+      pathPart = "users"
+    }
+  }
+
+  methods = new Listing {
+    new APIGateway.Method {
+      restApiId = "api-id"
+      resourceId = "resource-id"
+      httpMethod = "GET"
+      authorization = "NONE"
+    }
+  }
+
+  integrations = new Listing {
+    new APIGateway.Integration {
+      restApiId = "api-id"
+      resourceId = "resource-id"
+      httpMethod = "GET"
+      type = "MOCK"
+      integrationHttpMethod = "POST"
+      uri = "http://example.com"
+    }
+  }
+}

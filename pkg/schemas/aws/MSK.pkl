@@ -1,0 +1,31 @@
+module picklr.aws.MSK
+
+import "../Resource.pkl"
+
+/// An MSK Cluster.
+class Cluster extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the cluster.
+  clusterName: String
+
+  /// The number of broker nodes in the cluster.
+  numberOfBrokerNodes: Int
+
+  /// The interaction of the cluster with Apache Kafka APIs.
+  kafkaVersion: String
+
+  /// Information about the broker nodes in the cluster.
+  brokerNodeGroupInfo: Mapping<String, Any>
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["cluster_name"] = clusterName
+    ["number_of_broker_nodes"] = numberOfBrokerNodes
+    ["kafka_version"] = kafkaVersion
+    ["broker_node_group_info"] = brokerNodeGroupInfo
+    ["tags"] = tags
+  }
+}

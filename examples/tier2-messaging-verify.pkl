@@ -1,0 +1,71 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/SQS.pkl"
+import "../pkg/schemas/aws/SNS.pkl"
+import "../pkg/schemas/aws/EventBridge.pkl"
+
+aws {
+  region = "us-east-1"
+
+  // SQS Queue
+  queues = new Listing {
+    new SQS.Queue {
+      queueName = "my-test-queue.fifo"
+      visibilityTimeout = 60
+      messageRetentionPeriod = 86400
+      delaySeconds = 0
+      receiveMessageWaitTimeSeconds = 20
+      fifoQueue = true
+      contentBasedDeduplication = true
+      tags = new Mapping {
+        ["Environment"] = "Test"
+      }
+    }
+  }
+
+  // SNS Topic
+  topics = new Listing {
+    new SNS.Topic {
+      name = "my-test-topic.fifo"
+      displayName = "My FIFO Topic"
+      fifoTopic = true
+      contentBasedDeduplication = true
+      tags = new Mapping {
+        ["Project"] = "Picklr"
+      }
+    }
+  }
+
+  // SNS Subscription
+  subscriptions = new Listing {
+    new SNS.Subscription {
+      topicArn = "arn:aws:sns:us-east-1:123456789012:my-test-topic.fifo"
+      protocol = "sqs"
+      endpoint = "arn:aws:sqs:us-east-1:123456789012:my-test-queue.fifo"
+    }
+  }
+
+  // EventBridge
+  eventBuses = new Listing {
+    new EventBridge.EventBus {
+      name = "my-test-bus"
+    }
+  }
+
+  rules = new Listing {
+    new EventBridge.Rule {
+      name = "my-test-rule"
+      eventBusName = "my-test-bus"
+      eventPattern = "{\"source\":[\"my.app\"]}"
+    }
+  }
+
+  targets = new Listing {
+    new EventBridge.Target {
+      rule = "my-test-rule"
+      eventBusName = "my-test-bus"
+      arn = "arn:aws:sqs:us-east-1:123456789012:my-test-queue.fifo"
+      id = "my-target-id"
+    }
+  }
+}

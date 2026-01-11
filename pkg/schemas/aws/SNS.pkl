@@ -12,9 +12,25 @@ class Topic extends Resource.Resource {
   /// The display name to use for a topic with SMS subscriptions.
   displayName: String?
 
-  properties = new {
+  /// Designates a topic as FIFO.
+  fifoTopic: Boolean = false
+
+  /// Enables content-based deduplication (FIFO only).
+  contentBasedDeduplication: Boolean = false
+
+  /// The ID of an AWS-managed customer master key (CMK) for Amazon SNS or a custom CMK.
+  kmsMasterKeyId: String?
+
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
     ["name"] = name
     ["display_name"] = displayName
+    ["fifo_topic"] = fifoTopic
+    ["content_based_deduplication"] = contentBasedDeduplication
+    ["kms_master_key_id"] = kmsMasterKeyId
+    ["tags"] = tags
   }
 }
 

@@ -1,0 +1,61 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/GlobalAccelerator.pkl"
+import "../pkg/schemas/aws/ELBv2.pkl"
+
+aws {
+  region = "us-east-1"
+
+  loadBalancers = new Listing {
+    new ELBv2.LoadBalancer {
+      name = "my-lb"
+      subnets = new Listing { "subnet-12345678"; "subnet-87654321" }
+    }
+  }
+
+  accelerators = new Listing {
+    new GlobalAccelerator.Accelerator {
+      name = "my-accelerator"
+      ipAddressType = "IPV4"
+      enabled = true
+      tags = new Mapping {
+        ["Environment"] = "Prod"
+      }
+    }
+  }
+
+  globalAcceleratorListeners = new Listing {
+    new GlobalAccelerator.Listener {
+      acceleratorArn = "arn:aws:globalaccelerator::123456789012:accelerator/a-12345678" // Placeholder ARN
+      protocol = "TCP"
+      clientAffinity = "NONE"
+      portRanges = new Listing {
+        new GlobalAccelerator.PortRange {
+          fromPort = 80
+          toPort = 80
+        }
+        new GlobalAccelerator.PortRange {
+          fromPort = 443
+          toPort = 443
+        }
+      }
+    }
+  }
+
+  endpointGroups = new Listing {
+    new GlobalAccelerator.EndpointGroup {
+      listenerArn = "arn:aws:globalaccelerator::123456789012:accelerator/a-12345678/listener/l-12345678" // Placeholder ARN
+      endpointGroupRegion = "us-east-1"
+      trafficDialPercentage = 100.0
+      healthCheckPort = 80
+      healthCheckProtocol = "TCP"
+      endpointConfigurations = new Listing {
+        new GlobalAccelerator.EndpointConfiguration {
+          endpointId = "arn:aws:elasticloadbalancing:us-east-1:123456789012:loadbalancer/app/my-lb/1234567890abcdef" // Placeholder ALB ARN
+          weight = 128
+          clientIPPreservationEnabled = true
+        }
+      }
+    }
+  }
+}

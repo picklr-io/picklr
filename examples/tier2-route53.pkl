@@ -1,0 +1,83 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/CloudFront.pkl"
+import "../pkg/schemas/aws/Route53.pkl"
+import "../pkg/schemas/aws/ELBv2.pkl"
+
+aws {
+  region = "us-east-1"
+
+  loadBalancers = new Listing {
+    new ELBv2.LoadBalancer {
+      name = "my-lb"
+      subnets = new Listing { 
+        "subnet-123"
+        "subnet-456"
+      }
+    }
+  }
+
+  hostedZones = new Listing {
+    new Route53.HostedZone {
+      name = "example.com"
+    }
+  }
+
+  healthChecks = new Listing {
+    new Route53.HealthCheck {
+      ipAddress = "1.2.3.4"
+      port = 80
+      type = "HTTP"
+      resourcePath = "/"
+      failureThreshold = 3
+    }
+  }
+
+  recordSets = new Listing {
+    new Route53.RecordSet {
+      name = "www.example.com"
+      type = "A"
+      zoneId = "Z1234567890"
+      alias = new Mapping {
+        ["dnsName"] = "my-lb-1234567890.us-east-1.elb.amazonaws.com"
+        ["hostedZoneId"] = "Z268VQB9I2JYWC"
+        ["evaluateTargetHealth"] = true
+      }
+    }
+    new Route53.RecordSet {
+      name = "api.example.com"
+      type = "A"
+      zoneId = "Z1234567890" // Matches hostedZone above conceptually
+      ttl = 60
+      records = new Listing { "10.0.0.1" }
+    }
+  }
+
+  distributions = new Listing {
+    new CloudFront.Distribution {
+      enabled = true
+      origins = new Listing {
+        new CloudFront.Origin {
+          domainName = "my-lb-1234567890.us-east-1.elb.amazonaws.com"
+          originId = "my-alb-origin"
+        }
+        new CloudFront.Origin {
+          domainName = "my-bucket.s3.amazonaws.com"
+          originId = "my-s3-origin"
+        }
+      }
+      defaultCacheBehavior = new CloudFront.DefaultCacheBehavior {
+        targetOriginId = "my-s3-origin"
+        viewerProtocolPolicy = "redirect-to-https"
+      }
+      orderedCacheBehaviors = new Listing {
+        new CloudFront.OrderedCacheBehavior {
+          pathPattern = "/api/*"
+          targetOriginId = "my-alb-origin"
+          viewerProtocolPolicy = "https-only"
+          allowedMethods = new Listing { "GET"; "HEAD"; "OPTIONS"; "PUT"; "POST"; "PATCH"; "DELETE" }
+        }
+      }
+    }
+  }
+}

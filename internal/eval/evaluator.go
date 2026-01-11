@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"path/filepath"
 
 	"github.com/apple/pkl-go/pkl"
 	"github.com/picklr-io/picklr/internal/ir"
@@ -25,6 +26,11 @@ func (e *Evaluator) LoadConfig(ctx context.Context, entryPoint string, propertie
 	u, err := url.Parse("file://" + e.projectDir + "/")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse project directory URL: %w", err)
+	}
+
+	// Ensure entryPoint is absolute or relative to projectDir
+	if !filepath.IsAbs(entryPoint) {
+		entryPoint = filepath.Join(e.projectDir, entryPoint)
 	}
 
 	opts := []func(*pkl.EvaluatorOptions){pkl.PreconfiguredOptions}

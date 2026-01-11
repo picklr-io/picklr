@@ -6,7 +6,7 @@ import "../Resource.pkl"
 class Bucket extends Resource.Resource {
   provider = "aws"
 
-  /// The name of the bucket. If omitted, Terraform will assign a random, unique name.
+  /// The name of the bucket. If omitted, Picklr will assign a random, unique name.
   bucket: String?
 
   /// The canned ACL to apply. Defaults to "private".

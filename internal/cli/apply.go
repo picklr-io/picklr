@@ -93,7 +93,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	if len(plan.Changes) == 0 {
 		fmt.Println("No changes. Infrastructure is up-to-date.")
 	} else {
-		fmt.Println("\nTerraform will perform the following actions:")
+		fmt.Println("\nPicklr will perform the following actions:")
 
 		for _, change := range plan.Changes {
 			symbol := "~"

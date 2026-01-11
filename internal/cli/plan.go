@@ -105,7 +105,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	fmt.Printf("  NoOp:    %d\n", plan.Summary.NoOp)
 
 	if len(plan.Changes) > 0 {
-		fmt.Println("\nTerraform will perform the following actions:")
+		fmt.Println("\nPicklr will perform the following actions:")
 
 		for _, change := range plan.Changes {
 			symbol := "~"

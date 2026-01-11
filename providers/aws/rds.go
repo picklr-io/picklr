@@ -61,7 +61,7 @@ func (p *Provider) applyDBInstance(ctx context.Context, req *pb.ApplyRequest) (*
 
 	// Wait for creation to complete? RDS takes a long time.
 	// For MVP, we might just fire Create and return the ID.
-	// But Terraform usually waits.
+	// But Picklr usually waits.
 
 	resp, err := p.rdsClient.CreateDBInstance(ctx, input)
 	if err != nil {

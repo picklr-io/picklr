@@ -1,1 +1,3 @@
-amends "../../pkg/schemas/PklProject"
+amends "pkl:Project"
+
+// No dependencies needed for local relative imports

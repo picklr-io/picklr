@@ -1,5 +1,3 @@
 amends "pkl:Project"
 
-dependencies {
-  ["pklr"] = import("../../pkg/schemas/PklProject")
-}
+// No dependencies needed for local relative imports

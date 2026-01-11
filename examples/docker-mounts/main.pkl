@@ -1,5 +1,5 @@
-amends "@pklr/Config.pkl"
-import "@pklr/Docker.pkl"
+amends "../../pkg/schemas/Config.pkl"
+import "../../pkg/schemas/docker/Docker.pkl"
 
 docker {
   volumes {

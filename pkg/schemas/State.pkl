@@ -1,13 +1,12 @@
 module picklr.State
 
 /// Represents the persistent state of the infrastructure.
-class State {
-  version: Int = 1
-  serial: Int
-  lineage: String
-  resources: Listing<ResourceState> = new {}
-  outputs: Mapping<String, OutputValue>?
-}
+/// Represents the persistent state of the infrastructure.
+version: Int = 1
+serial: Int
+lineage: String
+resources: Listing<ResourceState> = new {}
+outputs: Mapping<String, OutputValue>?
 
 /// The state of a single managed resource.
 class ResourceState {

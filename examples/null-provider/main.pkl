@@ -1,4 +1,4 @@
-amends "../../pkg/schemas/core/Config.pkl"
+amends "../../pkg/schemas/Config.pkl"
 import "../../pkg/schemas/null/Resource.pkl"
 
 resources {

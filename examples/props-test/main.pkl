@@ -1,7 +1,7 @@
-amends "../../pkg/schemas/core/Config.pkl"
+amends "../../pkg/schemas/Config.pkl"
 
 outputs {
-  ["result"] = "I am \(read("prop:mood"))"
+  ["result"] = "I am \(read?("prop:mood") ?? "happy")"
 }
 
 resources {}

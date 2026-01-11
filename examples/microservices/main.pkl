@@ -1,4 +1,4 @@
-amends "@pklr/Config.pkl"
+amends "../../pkg/schemas/Config.pkl"
 
 docker {
   networks {

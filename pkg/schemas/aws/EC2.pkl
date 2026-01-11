@@ -111,11 +111,15 @@ class Subnet extends Resource.Resource {
   /// Map public IP on launch.
   mapPublicIpOnLaunch: Boolean = false
 
+  /// Tags.
+  tags: Mapping<String, String>?
+
   properties = new {
     ["vpc_id"] = vpcId
     ["cidr_block"] = cidrBlock
     ["availability_zone"] = availabilityZone
     ["map_public_ip_on_launch"] = mapPublicIpOnLaunch
+    ["tags"] = tags
   }
 }
 

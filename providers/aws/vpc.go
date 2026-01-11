@@ -21,10 +21,11 @@ type VpcState struct {
 }
 
 type SubnetConfig struct {
-	VpcID               string `json:"vpcId"`
-	CidrBlock           string `json:"cidrBlock"`
-	AvailabilityZone    string `json:"availabilityZone"`
-	MapPublicIpOnLaunch bool   `json:"mapPublicIpOnLaunch"`
+	VpcID               string            `json:"vpcId"`
+	CidrBlock           string            `json:"cidrBlock"`
+	AvailabilityZone    string            `json:"availabilityZone"`
+	MapPublicIpOnLaunch bool              `json:"mapPublicIpOnLaunch"`
+	Tags                map[string]string `json:"tags"`
 }
 
 type SubnetState struct {
@@ -130,6 +131,17 @@ func (p *Provider) applySubnet(ctx context.Context, req *pb.ApplyRequest) (*pb.A
 	resp, err := p.ec2Client.CreateSubnet(ctx, input)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create subnet: %w", err)
+	}
+
+	if len(desired.Tags) > 0 {
+		var tags []types.Tag
+		for k, v := range desired.Tags {
+			tags = append(tags, types.Tag{Key: &k, Value: &v})
+		}
+		_, _ = p.ec2Client.CreateTags(ctx, &ec2.CreateTagsInput{
+			Resources: []string{*resp.Subnet.SubnetId},
+			Tags:      tags,
+		})
 	}
 
 	if desired.MapPublicIpOnLaunch {

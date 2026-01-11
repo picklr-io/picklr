@@ -1,6 +1,6 @@
 module picklr.`null`.Resource
 
-import "../core/Resource.pkl" as Core
+import "../Resource.pkl" as Core
 
 /// A resource that fails or succeeds based on triggers, useful for testing.
 class Resource extends Core.Resource {

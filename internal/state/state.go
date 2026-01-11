@@ -62,7 +62,7 @@ func (m *Manager) Write(ctx context.Context, state *ir.State) error {
 
 	// Write header
 	fmt.Fprintf(f, "// Picklr state file\n")
-	fmt.Fprintf(f, "amends \"../../pkg/schemas/core/State.pkl\"\n\n")
+	fmt.Fprintf(f, "amends \"../../pkg/schemas/State.pkl\"\n\n")
 	fmt.Fprintf(f, "version = %d\n", state.Version)
 	fmt.Fprintf(f, "serial = %d\n", state.Serial+1)
 	fmt.Fprintf(f, "lineage = %q\n\n", state.Lineage)

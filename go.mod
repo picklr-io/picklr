@@ -15,6 +15,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.279.0
 	github.com/aws/aws-sdk-go-v2/service/ecr v1.55.1
 	github.com/aws/aws-sdk-go-v2/service/ecs v1.70.1
+	github.com/aws/aws-sdk-go-v2/service/efs v1.41.10
 	github.com/aws/aws-sdk-go-v2/service/elasticloadbalancingv2 v1.54.6
 	github.com/aws/aws-sdk-go-v2/service/eventbridge v1.45.18
 	github.com/aws/aws-sdk-go-v2/service/iam v1.53.1

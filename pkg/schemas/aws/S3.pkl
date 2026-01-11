@@ -63,3 +63,68 @@ class BucketPolicy extends Resource.Resource {
   }
 }
 
+
+/// S3 Bucket Lifecycle Configuration.
+class BucketLifecycle extends Resource.Resource {
+  provider = "aws"
+  
+  /// The bucket name.
+  bucket: String
+  
+  /// The lifecycle rules.
+  rules: Listing<LifecycleRule>
+
+  properties = new {
+    ["bucket"] = bucket
+    ["rules"] = rules.toList().map((r) -> r.toDynamic())
+  }
+}
+
+class LifecycleRule {
+  id: String
+  status: String = "Enabled"
+  expiration: Expiration?
+  
+  function toDynamic() = new Mapping {
+    ["id"] = id
+    ["status"] = status
+    ["expiration"] = if (expiration != null) expiration.toDynamic() else null
+  }
+}
+
+class Expiration {
+  days: Int?
+  
+  function toDynamic() = new Mapping {
+    ["days"] = days
+  }
+}
+
+/// S3 Bucket Notification.
+class BucketNotification extends Resource.Resource {
+  provider = "aws"
+  
+  /// The bucket name.
+  bucket: String
+  
+  /// Lambda function configurations.
+  lambdaFunctionConfigurations: Listing<LambdaFunctionConfiguration>?
+
+  properties = new {
+    ["bucket"] = bucket
+    ["lambda_function_configurations"] = 
+      if (lambdaFunctionConfigurations != null) 
+        lambdaFunctionConfigurations.toList().map((c) -> c.toDynamic())
+      else null
+  }
+}
+
+class LambdaFunctionConfiguration {
+  lambdaFunctionArn: String
+  events: Listing<String>
+  
+  function toDynamic() = new Mapping {
+    ["lambdaFunctionArn"] = lambdaFunctionArn
+    ["events"] = events
+  }
+}

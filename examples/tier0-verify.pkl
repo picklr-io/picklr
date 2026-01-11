@@ -1,0 +1,122 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/EC2.pkl"
+import "../pkg/schemas/aws/IAM.pkl"
+import "../pkg/schemas/aws/Lambda.pkl"
+import "../pkg/schemas/aws/EFS.pkl"
+import "../pkg/schemas/aws/S3.pkl"
+import "../pkg/schemas/aws/RDS.pkl"
+
+// Networking
+aws {
+  region = "us-east-1"
+  networkAcls = new Listing {
+    new EC2.NetworkAcl {
+      name = "my-acl"
+      vpcId = "vpc-123"
+    }
+  }
+
+  placementGroups = new Listing {
+    new EC2.PlacementGroup {
+      name = "my-pg"
+      strategy = "cluster"
+    }
+  }
+
+  // IAM
+  users = new Listing {
+    new IAM.User {
+      name = "my-user"
+    }
+  }
+
+  groups = new Listing {
+    new IAM.Group {
+      name = "my-group"
+    }
+  }
+
+  policyAttachments = new Listing {
+    new IAM.PolicyAttachment {
+      name = "my-attach"
+      policyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
+      users = new Listing { "my-user" }
+    }
+  }
+
+  serviceLinkedRoles = new Listing {
+    new IAM.ServiceLinkedRole {
+      serviceName = "elasticbeanstalk.amazonaws.com"
+    }
+  }
+
+  // Lambda
+  layers = new Listing {
+    new Lambda.Layer {
+      name = "my-layer"
+      code = "layer.zip"
+    }
+  }
+
+  permissions = new Listing {
+    new Lambda.Permission {
+      functionName = "my-func"
+      action = "lambda:InvokeFunction"
+      principal = "s3.amazonaws.com"
+    }
+  }
+
+  // EFS
+  fileSystems = new Listing {
+    new EFS.FileSystem {
+      creationToken = "token"
+    }
+  }
+
+  mountTargets = new Listing {
+    new EFS.MountTarget {
+      fileSystemId = "fs-123"
+      subnetId = "subnet-123"
+    }
+  }
+
+  // S3
+  bucketLifecycles = new Listing {
+    new S3.BucketLifecycle {
+      bucket = "my-bucket"
+      rules = new Listing {
+        new S3.LifecycleRule {
+          id = "rule1"
+          expiration = new S3.Expiration { days = 30 }
+        }
+      }
+    }
+  }
+
+  bucketNotifications = new Listing {
+    new S3.BucketNotification {
+      bucket = "my-bucket"
+      lambdaFunctionConfigurations = new Listing {
+        new S3.LambdaFunctionConfiguration {
+          lambdaFunctionArn = "arn:aws:lambda:us-east-1:123456789012:function:my-func"
+          events = new Listing { "s3:ObjectCreated:*" }
+        }
+      }
+    }
+  }
+
+  // RDS
+  dbParameterGroups = new Listing {
+    new RDS.DBParameterGroup {
+      name = "my-pg"
+      family = "mysql5.7"
+      parameters = new Listing {
+        new RDS.Parameter {
+          name = "character_set_server"
+          value = "utf8"
+        }
+      }
+    }
+  }
+}

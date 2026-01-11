@@ -1,0 +1,55 @@
+module picklr.aws.EFS
+
+import "../Resource.pkl"
+
+/// An EFS File System.
+class FileSystem extends Resource.Resource {
+  provider = "aws"
+  
+  /// The creation token.
+  creationToken: String?
+  
+  /// The performance mode.
+  performanceMode: String = "generalPurpose"
+  
+  /// Encrypted?
+  encrypted: Boolean = false
+  
+  /// KMS Key ID.
+  kmsKeyId: String?
+  
+  /// Tags.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["creation_token"] = creationToken
+    ["performance_mode"] = performanceMode
+    ["encrypted"] = encrypted
+    ["kms_key_id"] = kmsKeyId
+    ["tags"] = tags
+  }
+}
+
+/// An EFS Mount Target.
+class MountTarget extends Resource.Resource {
+  provider = "aws"
+  
+  /// The file system ID.
+  fileSystemId: String
+  
+  /// The subnet ID.
+  subnetId: String
+  
+  /// Security groups.
+  securityGroups: Listing<String>?
+  
+  /// IP Address.
+  ipAddress: String?
+
+  properties = new {
+    ["file_system_id"] = fileSystemId
+    ["subnet_id"] = subnetId
+    ["security_groups"] = securityGroups
+    ["ip_address"] = ipAddress
+  }
+}

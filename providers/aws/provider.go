@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/efs"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
@@ -51,6 +52,7 @@ type Provider struct {
 	acmClient         *acm.Client
 	cloudfrontClient  *cloudfront.Client
 	eventbridgeClient *eventbridge.Client
+	efsClient         *efs.Client
 
 	cloudwatchClient     *cloudwatch.Client
 	cloudwatchlogsClient *cloudwatchlogs.Client
@@ -89,6 +91,7 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.acmClient = acm.NewFromConfig(cfg)
 	p.cloudfrontClient = cloudfront.NewFromConfig(cfg)
 	p.eventbridgeClient = eventbridge.NewFromConfig(cfg)
+	p.efsClient = efs.NewFromConfig(cfg)
 
 	p.cloudwatchClient = cloudwatch.NewFromConfig(cfg)
 	p.cloudwatchlogsClient = cloudwatchlogs.NewFromConfig(cfg)
@@ -252,6 +255,8 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyVolume(ctx, req)
 	case "aws:RDS.DBSubnetGroup":
 		return p.applyDBSubnetGroup(ctx, req)
+	case "aws:RDS.DBParameterGroup":
+		return p.applyDBParameterGroup(ctx, req)
 	case "aws:RDS.DBCluster":
 		return p.applyDBCluster(ctx, req)
 	case "aws:EC2.NetworkAcl":
@@ -264,6 +269,32 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyTransitGatewayAttachment(ctx, req)
 	case "aws:EC2.VpcEndpoint":
 		return p.applyVpcEndpoint(ctx, req)
+	case "aws:EC2.PlacementGroup":
+		return p.applyPlacementGroup(ctx, req)
+
+	case "aws:IAM.User":
+		return p.applyUser(ctx, req)
+	case "aws:IAM.Group":
+		return p.applyGroup(ctx, req)
+	case "aws:IAM.PolicyAttachment":
+		return p.applyPolicyAttachment(ctx, req)
+	case "aws:IAM.ServiceLinkedRole":
+		return p.applyServiceLinkedRole(ctx, req)
+
+	case "aws:Lambda.Layer":
+		return p.applyLayer(ctx, req)
+	case "aws:Lambda.Permission":
+		return p.applyPermission(ctx, req)
+
+	case "aws:EFS.FileSystem":
+		return p.applyFileSystem(ctx, req)
+	case "aws:EFS.MountTarget":
+		return p.applyMountTarget(ctx, req)
+
+	case "aws:S3.BucketLifecycle":
+		return p.applyBucketLifecycle(ctx, req)
+	case "aws:S3.BucketNotification":
+		return p.applyBucketNotification(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)

@@ -259,9 +259,6 @@ class Ebs {
   deleteOnTermination: Boolean = true
 }
 
-}
-}
-
 /// An EBS Volume.
 class Volume extends Resource.Resource {
   provider = "aws"
@@ -363,3 +360,56 @@ class VpcEndpoint extends Resource.Resource {
 }
 
 
+/// A Network ACL.
+class NetworkAcl extends Resource.Resource {
+  provider = "aws"
+  vpcId: String
+  ingress: Listing<NetworkAclEntry>?
+  egress: Listing<NetworkAclEntry>?
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["vpc_id"] = vpcId
+    ["ingress"] = if (ingress != null) ingress.toList().map((e) -> e.toDynamic()) else null
+    ["egress"] = if (egress != null) egress.toList().map((e) -> e.toDynamic()) else null
+    ["tags"] = tags
+  }
+}
+
+class NetworkAclEntry {
+  ruleNumber: Int
+  protocol: String
+  ruleAction: String
+  cidrBlock: String
+  fromPort: Int = 0
+  toPort: Int = 0
+
+  function toDynamic() = new Mapping {
+    ["ruleNumber"] = ruleNumber
+    ["protocol"] = protocol
+    ["ruleAction"] = ruleAction
+    ["cidrBlock"] = cidrBlock
+    ["fromPort"] = fromPort
+    ["toPort"] = toPort
+  }
+}
+
+/// An EC2 Placement Group.
+class PlacementGroup extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the placement group.
+  name: String
+
+  /// The placement strategy. Can be "cluster", "spread", or "partition".
+  strategy: String = "cluster"
+
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["name"] = name
+    ["strategy"] = strategy
+    ["tags"] = tags
+  }
+}

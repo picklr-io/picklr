@@ -400,6 +400,7 @@ func (p *Provider) applyVolume(ctx context.Context, req *pb.ApplyRequest) (*pb.A
 	newState := VolumeState{ID: *resp.VolumeId}
 	stateJSON, _ := json.Marshal(newState)
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
 
 // NetworkAcl
 type NetworkAclEntry struct {
@@ -743,3 +744,59 @@ func (p *Provider) applyVpcEndpoint(ctx context.Context, req *pb.ApplyRequest) (
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
 
+// PlacementGroup
+type PlacementGroupConfig struct {
+	Name     string            `json:"name"`
+	Strategy string            `json:"strategy"`
+	Tags     map[string]string `json:"tags"`
+}
+
+type PlacementGroupState struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+func (p *Provider) applyPlacementGroup(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior PlacementGroupState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.Name != "" {
+			_, err := p.ec2Client.DeletePlacementGroup(ctx, &ec2.DeletePlacementGroupInput{GroupName: &prior.Name})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete placement group: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired PlacementGroupConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	input := &ec2.CreatePlacementGroupInput{
+		GroupName: &desired.Name,
+		Strategy:  types.PlacementStrategy(desired.Strategy),
+	}
+	
+	if len(desired.Tags) > 0 {
+		var tags []types.Tag
+		for k, v := range desired.Tags {
+			tags = append(tags, types.Tag{Key: &k, Value: &v})
+		}
+		input.TagSpecifications = []types.TagSpecification{
+			{ResourceType: types.ResourceTypePlacementGroup, Tags: tags},
+		}
+	}
+
+	resp, err := p.ec2Client.CreatePlacementGroup(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create placement group: %w", err)
+	}
+
+	newState := PlacementGroupState{
+		Name: *resp.PlacementGroup.GroupName,
+		ID:   *resp.PlacementGroup.GroupId,
+	}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}

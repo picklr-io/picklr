@@ -91,3 +91,46 @@ class DBCluster extends Resource.Resource {
   }
 }
 
+
+/// An RDS DB Parameter Group.
+class DBParameterGroup extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the parameter group.
+  name: String
+  
+  /// The family of the parameter group.
+  family: String
+  
+  /// The description of the parameter group.
+  description: String?
+  
+  /// The parameters in the group.
+  parameters: Listing<Parameter>?
+  
+  /// A mapping of tags to assign to the resource.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["name"] = name
+    ["family"] = family
+    ["description"] = description
+    ["parameters"] = 
+      if (parameters != null)
+        parameters.toList().map((p) -> p.toDynamic())
+      else null
+    ["tags"] = tags
+  }
+}
+
+class Parameter {
+  name: String
+  value: String
+  applyMethod: String = "immediate"
+  
+  function toDynamic() = new Mapping {
+    ["name"] = name
+    ["value"] = value
+    ["applyMethod"] = applyMethod
+  }
+}

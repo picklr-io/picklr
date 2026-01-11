@@ -1,0 +1,14 @@
+amends "pkl:Project"
+
+evaluatorSettings {
+  externalProperties {
+    ["foo"] = "bar"
+  }
+}
+
+package {
+  name = "examples"
+  baseUri = "package://picklr.io/examples"
+  version = "0.0.1"
+  packageZipUrl = "https://example.com/repo.zip"
+}

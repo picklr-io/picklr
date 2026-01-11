@@ -29,3 +29,51 @@ class Function extends Resource.Resource {
     ["code"] = code
   }
 }
+
+/// A Lambda Layer.
+class Layer extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the layer.
+  name: String
+  
+  /// The description of the layer.
+  description: String?
+  
+  /// The path to the ZIP file for the layer code.
+  code: String
+  
+  /// A list of compatible runtimes.
+  compatibleRuntimes: Listing<String>?
+
+  properties = new {
+    ["name"] = name
+    ["description"] = description
+    ["code"] = code
+    ["compatible_runtimes"] = compatibleRuntimes
+  }
+}
+
+/// A Lambda Permission.
+class Permission extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the function.
+  functionName: String
+  
+  /// The action the principal can use on the function.
+  action: String
+  
+  /// The principal that is given permission to invoke the function.
+  principal: String
+  
+  /// The source ARN for the permission.
+  sourceArn: String?
+
+  properties = new {
+    ["function_name"] = functionName
+    ["action"] = action
+    ["principal"] = principal
+    ["source_arn"] = sourceArn
+  }
+}

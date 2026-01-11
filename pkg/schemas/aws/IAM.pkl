@@ -56,3 +56,87 @@ class InstanceProfile extends Resource.Resource {
   }
 }
 
+
+/// An IAM User.
+class User extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the user.
+  name: String
+  
+  /// The path for the user.
+  path: String = "/"
+  
+  /// A map of tags to assign to the user.
+  tags: Mapping<String, String>?
+
+  properties = new {
+    ["name"] = name
+    ["path"] = path
+    ["tags"] = tags
+  }
+}
+
+/// An IAM Group.
+class Group extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the group.
+  name: String
+  
+  /// The path for the group.
+  path: String = "/"
+
+  properties = new {
+    ["name"] = name
+    ["path"] = path
+  }
+}
+
+/// Attaches a Managed IAM Policy to an IAM User, Role, or Group.
+class PolicyAttachment extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the attachment.
+  name: String
+
+  /// The ARN of the policy to attach.
+  policyArn: String
+
+  /// The user(s) the policy should be applied to.
+  users: Listing<String>?
+
+  /// The role(s) the policy should be applied to.
+  roles: Listing<String>?
+
+  /// The group(s) the policy should be applied to.
+  groups: Listing<String>?
+
+  properties = new {
+    ["name"] = name
+    ["policy_arn"] = policyArn
+    ["users"] = users
+    ["roles"] = roles
+    ["groups"] = groups
+  }
+}
+
+/// An IAM Service Linked Role.
+class ServiceLinkedRole extends Resource.Resource {
+  provider = "aws"
+  
+  /// The service name for the service linked role.
+  serviceName: String
+  
+  /// The description of the role.
+  description: String?
+  
+  /// Additional suffix for the role name.
+  customSuffix: String?
+
+  properties = new {
+    ["service_name"] = serviceName
+    ["description"] = description
+    ["custom_suffix"] = customSuffix
+  }
+}

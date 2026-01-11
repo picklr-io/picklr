@@ -10,6 +10,7 @@ import "DynamoDB.pkl"
 import "EC2.pkl"
 import "ECR.pkl"
 import "ECS.pkl"
+import "EFS.pkl"
 import "ELBv2.pkl"
 import "EventBridge.pkl"
 import "IAM.pkl"
@@ -81,6 +82,24 @@ class Config {
   /// List of IAM Policies.
   policies: Listing<IAM.Policy>?
 
+  /// List of IAM Users.
+  users: Listing<IAM.User>?
+
+  /// List of IAM Groups.
+  groups: Listing<IAM.Group>?
+
+  /// List of IAM Policy Attachments.
+  policyAttachments: Listing<IAM.PolicyAttachment>?
+
+  /// List of Lambda Layers.
+  layers: Listing<Lambda.Layer>?
+
+  /// List of Lambda Permissions.
+  permissions: Listing<Lambda.Permission>?
+
+  /// List of IAM Service Linked Roles.
+  serviceLinkedRoles: Listing<IAM.ServiceLinkedRole>?
+
   /// List of IAM Instance Profiles.
   instanceProfiles: Listing<IAM.InstanceProfile>?
 
@@ -98,6 +117,9 @@ class Config {
 
   /// List of Network ACLs.
   networkAcls: Listing<EC2.NetworkAcl>?
+
+  /// List of Placement Groups.
+  placementGroups: Listing<EC2.PlacementGroup>?
 
   /// List of VPC Peering Connections.
   vpcPeeringConnections: Listing<EC2.VpcPeeringConnection>?
@@ -117,6 +139,9 @@ class Config {
 
   /// List of RDS DB Subnet Groups.
   dbSubnetGroups: Listing<RDS.DBSubnetGroup>?
+
+  /// List of RDS DB Parameter Groups.
+  dbParameterGroups: Listing<RDS.DBParameterGroup>?
 
   /// List of RDS DB Clusters.
   dbClusters: Listing<RDS.DBCluster>?
@@ -205,6 +230,18 @@ class Config {
   /// List of EventBridge Targets.
   targets: Listing<EventBridge.Target>?
 
+  /// List of EFS File Systems.
+  fileSystems: Listing<EFS.FileSystem>?
+
+  /// List of EFS Mount Targets.
+  mountTargets: Listing<EFS.MountTarget>?
+
+  /// List of S3 Bucket Lifecycles.
+  bucketLifecycles: Listing<S3.BucketLifecycle>?
+
+  /// List of S3 Bucket Notifications.
+  bucketNotifications: Listing<S3.BucketNotification>?
+
   /// Flattened list of all AWS resources.
   allResources: Listing<Resource.Resource> = new Listing {
     ...(if (buckets != null) buckets else new Listing {})
@@ -212,6 +249,7 @@ class Config {
     ...(if (launchTemplates != null) launchTemplates else new Listing {})
     ...(if (keyPairs != null) keyPairs else new Listing {})
     ...(if (autoScalingGroups != null) autoScalingGroups else new Listing {})
+    ...(if (placementGroups != null) placementGroups else new Listing {})
     ...(if (networkAcls != null) networkAcls else new Listing {})
     ...(if (vpcPeeringConnections != null) vpcPeeringConnections else new Listing {})
     ...(if (transitGateways != null) transitGateways else new Listing {})
@@ -226,14 +264,21 @@ class Config {
     ...(if (routeTables != null) routeTables else new Listing {})
     ...(if (roles != null) roles else new Listing {})
     ...(if (policies != null) policies else new Listing {})
+    ...(if (users != null) users else new Listing {})
+    ...(if (groups != null) groups else new Listing {})
+    ...(if (policyAttachments != null) policyAttachments else new Listing {})
+    ...(if (serviceLinkedRoles != null) serviceLinkedRoles else new Listing {})
     ...(if (instanceProfiles != null) instanceProfiles else new Listing {})
     ...(if (bucketPolicies != null) bucketPolicies else new Listing {})
     ...(if (functions != null) functions else new Listing {})
+    ...(if (layers != null) layers else new Listing {})
+    ...(if (permissions != null) permissions else new Listing {})
 
     ...(if (tables != null) tables else new Listing {})
     ...(if (volumes != null) volumes else new Listing {})
     ...(if (dbInstances != null) dbInstances else new Listing {})
     ...(if (dbSubnetGroups != null) dbSubnetGroups else new Listing {})
+    ...(if (dbParameterGroups != null) dbParameterGroups else new Listing {})
     ...(if (dbClusters != null) dbClusters else new Listing {})
     ...(if (queues != null) queues else new Listing {})
 
@@ -263,6 +308,11 @@ class Config {
     ...(if (certificateValidations != null) certificateValidations else new Listing {})
     ...(if (eventBuses != null) eventBuses else new Listing {})
     ...(if (rules != null) rules else new Listing {})
+    ...(if (rules != null) rules else new Listing {})
     ...(if (targets != null) targets else new Listing {})
+    ...(if (fileSystems != null) fileSystems else new Listing {})
+    ...(if (mountTargets != null) mountTargets else new Listing {})
+    ...(if (bucketLifecycles != null) bucketLifecycles else new Listing {})
+    ...(if (bucketNotifications != null) bucketNotifications else new Listing {})
   }
 }

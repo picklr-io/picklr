@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go"
 	pb "github.com/picklr-io/picklr/pkg/proto/provider"
 )
@@ -172,6 +173,133 @@ func (p *Provider) applyBucketPolicy(ctx context.Context, req *pb.ApplyRequest) 
 	}
 
 	newState := BucketPolicyState{Bucket: desired.Bucket}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
+
+// BucketLifecycle
+type LifecycleRuleConfig struct {
+	ID         string            `json:"id"`
+	Status     string            `json:"status"`
+	Expiration *ExpirationConfig `json:"expiration"`
+}
+
+type ExpirationConfig struct {
+	Days int `json:"days"`
+}
+
+type BucketLifecycleConfig struct {
+	Bucket string                `json:"bucket"`
+	Rules  []LifecycleRuleConfig `json:"rules"`
+}
+
+type BucketLifecycleState struct {
+	Bucket string `json:"bucket"`
+}
+
+func (p *Provider) applyBucketLifecycle(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior BucketLifecycleState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.Bucket != "" {
+			_, err := p.s3Client.DeleteBucketLifecycle(ctx, &s3.DeleteBucketLifecycleInput{Bucket: &prior.Bucket})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete bucket lifecycle: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired BucketLifecycleConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	var rules []types.LifecycleRule
+	for _, r := range desired.Rules {
+		rule := types.LifecycleRule{
+			ID:     &r.ID,
+			Status: types.ExpirationStatus(r.Status),
+			Filter: &types.LifecycleRuleFilter{Prefix: func(s string) *string { return &s }("")}, // Applies to all if not specified, simplistic
+		}
+		if r.Expiration != nil {
+			rule.Expiration = &types.LifecycleExpiration{
+				Days: func(i int32) *int32 { return &i }(int32(r.Expiration.Days)),
+			}
+		}
+		rules = append(rules, rule)
+	}
+
+	_, err := p.s3Client.PutBucketLifecycleConfiguration(ctx, &s3.PutBucketLifecycleConfigurationInput{
+		Bucket:                 &desired.Bucket,
+		LifecycleConfiguration: &types.BucketLifecycleConfiguration{Rules: rules},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to put bucket lifecycle: %w", err)
+	}
+
+	newState := BucketLifecycleState{Bucket: desired.Bucket}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
+
+// BucketNotification
+type LambdaFunctionConfigurationConfig struct {
+	LambdaFunctionArn string   `json:"lambdaFunctionArn"`
+	Events            []string `json:"events"`
+}
+
+type BucketNotificationConfig struct {
+	Bucket                       string                              `json:"bucket"`
+	LambdaFunctionConfigurations []LambdaFunctionConfigurationConfig `json:"lambda_function_configurations"`
+}
+
+type BucketNotificationState struct {
+	Bucket string `json:"bucket"`
+}
+
+func (p *Provider) applyBucketNotification(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		// S3 Notification configuration can be cleared by putting empty config.
+		var prior BucketNotificationState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.Bucket != "" {
+			_, err := p.s3Client.PutBucketNotificationConfiguration(ctx, &s3.PutBucketNotificationConfigurationInput{
+				Bucket:                    &prior.Bucket,
+				NotificationConfiguration: &types.NotificationConfiguration{},
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to clear bucket notification: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired BucketNotificationConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	nc := &types.NotificationConfiguration{}
+
+	for _, l := range desired.LambdaFunctionConfigurations {
+		var events []types.Event
+		for _, e := range l.Events {
+			events = append(events, types.Event(e))
+		}
+		nc.LambdaFunctionConfigurations = append(nc.LambdaFunctionConfigurations, types.LambdaFunctionConfiguration{
+			LambdaFunctionArn: &l.LambdaFunctionArn,
+			Events:            events,
+		})
+	}
+
+	_, err := p.s3Client.PutBucketNotificationConfiguration(ctx, &s3.PutBucketNotificationConfigurationInput{
+		Bucket:                    &desired.Bucket,
+		NotificationConfiguration: nc,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to put bucket notification: %w", err)
+	}
+
+	newState := BucketNotificationState{Bucket: desired.Bucket}
 	stateJSON, _ := json.Marshal(newState)
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }

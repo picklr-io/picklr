@@ -38,6 +38,27 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
 	}
+	entryPoint := "main.pkl"
+
+	if len(args) > 0 {
+		absPath, err := filepath.Abs(args[0])
+		if err != nil {
+			return fmt.Errorf("failed to resolve path %s: %w", args[0], err)
+		}
+
+		info, err := os.Stat(absPath)
+		if err != nil {
+			return fmt.Errorf("failed to stat path %s: %w", args[0], err)
+		}
+
+		if info.IsDir() {
+			wd = absPath
+		} else {
+			wd = filepath.Dir(absPath)
+			entryPoint = filepath.Base(absPath)
+		}
+	}
+	fmt.Printf("DEBUG: wd=%s, entryPoint=%s\n", wd, entryPoint)
 	ctx := cmd.Context()
 
 	// 1. Initialize Components
@@ -53,7 +74,7 @@ func runPlan(cmd *cobra.Command, args []string) error {
 
 	// 2. Load Config
 	fmt.Print("Loading configuration... ")
-	cfg, err := evaluator.LoadConfig(ctx, "main.pkl", nil)
+	cfg, err := evaluator.LoadConfig(ctx, entryPoint, nil)
 	if err != nil {
 		fmt.Println("FAILED")
 		return fmt.Errorf("failed to load config: %w", err)

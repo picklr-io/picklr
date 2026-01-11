@@ -36,6 +36,14 @@ github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.53.1 h1:ElB5x0nrBHgQs+XcpQ1XJ
 github.com/aws/aws-sdk-go-v2/service/cloudwatch v1.53.1/go.mod h1:Cj+LUEvAU073qB2jInKV6Y0nvHX0k7bL7KAga9zZ3jw=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.63.1 h1:l65dmgr7tO26EcHe6WMdseRnFLoJ2nqdkPz1nJdXfaw=
 github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs v1.63.1/go.mod h1:wvnXh1w1pGS2UpEvPTKSjXYuxiXhuvob/IMaK2AWvek=
+github.com/aws/aws-sdk-go-v2/service/codebuild v1.68.9 h1:3YP3XzFGQj7zQVNtwpdWlvcPv/7cv1xHvxNTzUdoDnA=
+github.com/aws/aws-sdk-go-v2/service/codebuild v1.68.9/go.mod h1:7IHEW65aHpPZ/ESPS5XT74RnsVTmNU/mjryr1SRkrdE=
+github.com/aws/aws-sdk-go-v2/service/codecommit v1.33.8 h1:KxKGfYvkVOe/U/Z4yAd0ZySRJHavuL31VOC+fn7WEAs=
+github.com/aws/aws-sdk-go-v2/service/codecommit v1.33.8/go.mod h1:cznnFD3BzYY+NB+4WoQ7SxdTACOsMqGCbQ5QaByPz4w=
+github.com/aws/aws-sdk-go-v2/service/codedeploy v1.35.9 h1:/VwyQLIpKMec9Yd8GEB680WCQM/x1g+Xb/7Jxl4RW6E=
+github.com/aws/aws-sdk-go-v2/service/codedeploy v1.35.9/go.mod h1:DFcD5m69tjxbZLwVTBhLJf17jszG9OkT5BgjOkxIqSI=
+github.com/aws/aws-sdk-go-v2/service/codepipeline v1.46.17 h1:PZ/D+pYBufNWSnrQupG4RO70A/O0S8JeFu9ejPOTJUI=
+github.com/aws/aws-sdk-go-v2/service/codepipeline v1.46.17/go.mod h1:Ts78EtEwbBVy1FwJ3OC2as+PMjEzBumfzHzvhK2B3kg=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.53.5 h1:mSBrQCXMjEvLHsYyJVbN8QQlcITXwHEuu+8mX9e2bSo=
 github.com/aws/aws-sdk-go-v2/service/dynamodb v1.53.5/go.mod h1:eEuD0vTf9mIzsSjGBFWIaNQwtH5/mzViJOVQfnMY5DE=
 github.com/aws/aws-sdk-go-v2/service/ec2 v1.279.0 h1:o7eJKe6VYAnqERPlLAvDW5VKXV6eTKv1oxTpMoDP378=
@@ -86,6 +94,8 @@ github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.12 h1:AHDr0DaHIAo8c9t1emrzAlV
 github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.12/go.mod h1:GQ73XawFFiWxyWXMHWfhiomvP3tXtdNar/fi8z18sx0=
 github.com/aws/aws-sdk-go-v2/service/sts v1.41.5 h1:SciGFVNZ4mHdm7gpD1dgZYnCuVdX1s+lFTg4+4DOy70=
 github.com/aws/aws-sdk-go-v2/service/sts v1.41.5/go.mod h1:iW40X4QBmUxdP+fZNOpfmkdMZqsovezbAeO+Ubiv2pk=
+github.com/aws/aws-sdk-go-v2/service/xray v1.36.17 h1:b480fLepDHf9B7FXgcgB7XVDN3pKUACF2MbKu29JYcA=
+github.com/aws/aws-sdk-go-v2/service/xray v1.36.17/go.mod h1:ASKVut5pRPVm4bF9/P01ClCthnIopv1PjxWsLOTjKPU=
 github.com/aws/smithy-go v1.24.0 h1:LpilSUItNPFr1eY85RYgTIg5eIEPtvFbskaFcmmIUnk=
 github.com/aws/smithy-go v1.24.0/go.mod h1:LEj2LM3rBRQJxPZTB4KuzZkaZYnZPnvgIhb4pu07mx0=
 github.com/cenkalti/backoff/v5 v5.0.3 h1:ZN+IMa753KfX5hd8vVaMixjnqRZ3y8CuJKRKj1xcsSM=

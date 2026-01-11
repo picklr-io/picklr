@@ -191,3 +191,90 @@ func (p *Provider) applyListener(ctx context.Context, req *pb.ApplyRequest) (*pb
 
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
+
+// ListenerRule
+type ListenerRuleConfig struct {
+	ListenerArn string            `json:"listener_arn"`
+	Priority    int               `json:"priority"`
+	Actions     []Action          `json:"actions"`
+	Conditions  []ConditionConfig `json:"conditions"`
+}
+
+type ConditionConfig struct {
+	Field             *string            `json:"field"`
+	Values            []string           `json:"values"`
+	HostHeaderConfig  *HostHeaderConfig  `json:"host_header_config"`
+	PathPatternConfig *PathPatternConfig `json:"path_pattern_config"`
+}
+
+type HostHeaderConfig struct {
+	Values []string `json:"values"`
+}
+
+type PathPatternConfig struct {
+	Values []string `json:"values"`
+}
+
+type ListenerRuleState struct {
+	ARN string `json:"arn"`
+}
+
+func (p *Provider) applyListenerRule(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior ListenerRuleState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.ARN != "" {
+			_, err := p.elbv2Client.DeleteRule(ctx, &elasticloadbalancingv2.DeleteRuleInput{RuleArn: &prior.ARN})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete rule: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired ListenerRuleConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	var actions []types.Action
+	for _, a := range desired.Actions {
+		actions = append(actions, types.Action{
+			Type:           types.ActionTypeEnum(a.Type),
+			TargetGroupArn: &a.TargetGroupArn,
+		})
+	}
+
+	var conditions []types.RuleCondition
+	for _, c := range desired.Conditions {
+		cond := types.RuleCondition{}
+		if c.Field != nil {
+			cond.Field = c.Field
+		}
+		if len(c.Values) > 0 {
+			cond.Values = c.Values
+		}
+		if c.HostHeaderConfig != nil {
+			cond.HostHeaderConfig = &types.HostHeaderConditionConfig{Values: c.HostHeaderConfig.Values}
+		}
+		if c.PathPatternConfig != nil {
+			cond.PathPatternConfig = &types.PathPatternConditionConfig{Values: c.PathPatternConfig.Values}
+		}
+		conditions = append(conditions, cond)
+	}
+
+	input := &elasticloadbalancingv2.CreateRuleInput{
+		ListenerArn: &desired.ListenerArn,
+		Priority:    func(i int32) *int32 { return &i }(int32(desired.Priority)),
+		Actions:     actions,
+		Conditions:  conditions,
+	}
+
+	resp, err := p.elbv2Client.CreateRule(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create rule: %w", err)
+	}
+
+	newState := ListenerRuleState{ARN: *resp.Rules[0].RuleArn}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}

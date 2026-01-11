@@ -111,3 +111,47 @@ func (p *Provider) applySecretVersion(ctx context.Context, req *pb.ApplyRequest)
 
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
+
+// SecretPolicy
+type SecretPolicyConfig struct {
+	SecretID          string `json:"secretId"`
+	ResourcePolicy    string `json:"resourcePolicy"`
+	BlockPublicPolicy bool   `json:"blockPublicPolicy"`
+}
+
+type SecretPolicyState struct {
+	SecretID string `json:"secretId"`
+}
+
+func (p *Provider) applySecretPolicy(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior SecretPolicyState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.SecretID != "" {
+			_, err := p.secretsmanagerClient.DeleteResourcePolicy(ctx, &secretsmanager.DeleteResourcePolicyInput{
+				SecretId: &prior.SecretID,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete secret policy: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired SecretPolicyConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	_, err := p.secretsmanagerClient.PutResourcePolicy(ctx, &secretsmanager.PutResourcePolicyInput{
+		SecretId:          &desired.SecretID,
+		ResourcePolicy:    &desired.ResourcePolicy,
+		BlockPublicPolicy: &desired.BlockPublicPolicy,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to put resource policy: %w", err)
+	}
+
+	newState := SecretPolicyState{SecretID: desired.SecretID}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}

@@ -1,0 +1,172 @@
+amends "../pkg/schemas/Config.pkl"
+
+import "../pkg/schemas/aws/ELBv2.pkl"
+import "../pkg/schemas/aws/KMS.pkl"
+import "../pkg/schemas/aws/CloudWatch.pkl"
+import "../pkg/schemas/aws/CodeBuild.pkl"
+import "../pkg/schemas/aws/CodePipeline.pkl"
+import "../pkg/schemas/aws/CodeDeploy.pkl"
+import "../pkg/schemas/aws/CodeCommit.pkl"
+import "../pkg/schemas/aws/XRay.pkl"
+
+aws {
+  region = "us-east-1"
+  
+  // ELBv2
+  listenerRules = new Listing {
+    new ELBv2.ListenerRule {
+      listenerArn = "arn:aws:elasticloadbalancing:us-east-1:123456789012:listener/app/my-load-balancer/50dc6c495c0c9188/2222222222222222"
+      priority = 10
+      actions = new Listing {
+        new ELBv2.Action {
+          type = "forward"
+          targetGroupArn = "arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-targets/73e2d6bc24d8a067"
+        }
+      }
+      conditions = new Listing {
+        new ELBv2.Condition {
+          field = "host-header"
+          hostHeaderConfig = new ELBv2.HostHeaderConfig {
+            values = new Listing { "example.com" }
+          }
+        }
+      }
+    }
+  }
+
+  // KMS
+  keys = new Listing {
+    new KMS.Key {
+      description = "My Key"
+      keyUsage = "ENCRYPT_DECRYPT"
+      enabled = true
+      policy = "{\"Version\": \"2012-10-17\",\"Statement\": [{\"Sid\": \"Enable IAM User Permissions\",\"Effect\": \"Allow\",\"Principal\": {\"AWS\": \"arn:aws:iam::111122223333:root\"},\"Action\": \"kms:*\",\"Resource\": \"*\"}]}"
+    }
+  }
+
+  // CloudWatch
+  dashboards = new Listing {
+    new CloudWatch.Dashboard {
+      dashboardName = "MyDashboard"
+      dashboardBody = "{\"widgets\":[]}"
+    }
+  }
+
+  logStreams = new Listing {
+    new CloudWatch.LogStream {
+      logGroupName = "my-log-group"
+      logStreamName = "my-stream"
+    }
+  }
+
+  // CodeCommit
+  codeCommitRepositories = new Listing {
+    new CodeCommit.Repository {
+      repositoryName = "my-repo"
+      description = "My Repo"
+    }
+  }
+
+  // CodeBuild
+  codeBuildProjects = new Listing {
+    new CodeBuild.Project {
+      name = "my-project"
+      serviceRole = "arn:aws:iam::123456789012:role/service-role/role"
+      source = new CodeBuild.Source {
+        type = "CODECOMMIT"
+        location = "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/my-repo"
+      }
+      artifacts = new CodeBuild.Artifacts {
+        type = "NO_ARTIFACTS"
+      }
+      environment = new CodeBuild.Environment {
+        type = "LINUX_CONTAINER"
+        image = "aws/codebuild/standard:4.0"
+        computeType = "BUILD_GENERAL1_SMALL"
+      }
+    }
+  }
+
+  // CodeDeploy
+  codeDeployApplications = new Listing {
+    new CodeDeploy.Application {
+      applicationName = "my-app"
+      computePlatform = "Server"
+    }
+  }
+
+  codeDeployDeploymentGroups = new Listing {
+    new CodeDeploy.DeploymentGroup {
+      applicationName = "my-app"
+      deploymentGroupName = "my-dg"
+      serviceRoleArn = "arn:aws:iam::123456789012:role/service-role/role"
+      ec2TagFilters = new Listing {
+        new CodeDeploy.EC2TagFilter {
+          key = "Name"
+          value = "my-instance"
+          type = "KEY_AND_VALUE"
+        }
+      }
+    }
+  }
+
+  // CodePipeline
+  codePipelines = new Listing {
+    new CodePipeline.Pipeline {
+      name = "my-pipeline"
+      roleArn = "arn:aws:iam::123456789012:role/service-role/role"
+      artifactStore = new CodePipeline.ArtifactStore {
+        type = "S3"
+        location = "my-bucket"
+      }
+      stages = new Listing {
+        new CodePipeline.Stage {
+          name = "Source"
+          actions = new Listing {
+            new CodePipeline.Action {
+              name = "Source"
+              actionTypeId = new CodePipeline.ActionTypeId {
+                category = "Source"
+                owner = "AWS"
+                provider = "CodeCommit"
+                version = "1"
+              }
+              configuration = new Mapping {
+                ["RepositoryName"] = "my-repo"
+                ["BranchName"] = "master"
+              }
+              outputArtifacts = new Listing {
+                new CodePipeline.OutputArtifact { name = "SourceArtifact" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // X-Ray
+  xrayGroups = new Listing {
+    new XRay.Group {
+      name = "my-group"
+      filterExpression = "service(\"my-service\")"
+      tags = new Mapping { ["Environment"] = "Test" }
+    }
+  }
+
+  samplingRules = new Listing {
+    new XRay.SamplingRule {
+      name = "my-rule"
+      priority = 100
+      fixedRate = 0.1
+      reservoirSize = 5
+      serviceName = "*"
+      serviceType = "*"
+      host = "*"
+      httpMethod = "*"
+      urlPath = "/api/*"
+      attributes = new Mapping { ["foo"] = "bar" }
+      tags = new Mapping { ["Environment"] = "Test" }
+    }
+  }
+}

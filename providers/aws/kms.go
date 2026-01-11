@@ -13,6 +13,7 @@ import (
 type KeyConfig struct {
 	Description string `json:"description"`
 	KeyUsage    string `json:"key_usage"`
+	Policy      string `json:"policy"`
 	Enabled     bool   `json:"enabled"`
 }
 
@@ -57,6 +58,7 @@ func (p *Provider) applyKey(ctx context.Context, req *pb.ApplyRequest) (*pb.Appl
 	resp, err := p.kmsClient.CreateKey(ctx, &kms.CreateKeyInput{
 		Description: &desired.Description,
 		KeyUsage:    types.KeyUsageType(desired.KeyUsage),
+		Policy:      &desired.Policy,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to create key: %w", err)

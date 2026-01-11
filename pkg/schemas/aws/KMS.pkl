@@ -12,12 +12,16 @@ class Key extends Resource.Resource {
   /// Specifies the intended use of the key.
   keyUsage: String = "ENCRYPT_DECRYPT"
 
+  /// The key policy.
+  policy: String?
+  
   /// Specifies whether the key is enabled.
   enabled: Boolean = true
 
   properties = new Mapping {
     ["description"] = description
     ["key_usage"] = keyUsage
+    ["policy"] = policy
     ["enabled"] = enabled
   }
 }

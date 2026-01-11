@@ -1,0 +1,69 @@
+module picklr.aws.CodeBuild
+
+import "../Resource.pkl"
+
+/// A CodeBuild Project.
+class Project extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the build project.
+  name: String
+  
+  /// The description.
+  description: String?
+  
+  /// The service role ARN.
+  serviceRole: String
+  
+  /// The source.
+  source: Source
+  
+  /// The artifacts.
+  artifacts: Artifacts
+  
+  /// The environment.
+  environment: Environment
+
+  properties = new Mapping {
+    ["name"] = name
+    ["description"] = description
+    ["service_role"] = serviceRole
+    ["source"] = source.toDynamic()
+    ["artifacts"] = artifacts.toDynamic()
+    ["environment"] = environment.toDynamic()
+  }
+}
+
+class Source {
+  type: String // CODECOMMIT, CODEPIPELINE, GITHUB, S3, BITBUCKET, GITHUB_ENTERPRISE, NO_SOURCE
+  location: String?
+  buildspec: String?
+
+  function toDynamic() = new Mapping {
+    ["type"] = type
+    ["location"] = location
+    ["buildspec"] = buildspec
+  }
+}
+
+class Artifacts {
+  type: String // CODEPIPELINE, S3, NO_ARTIFACTS
+  location: String?
+  
+  function toDynamic() = new Mapping {
+    ["type"] = type
+    ["location"] = location
+  }
+}
+
+class Environment {
+  type: String // LINUX_CONTAINER, LINUX_GPU_CONTAINER, WINDOWS_CONTAINER, ARM_CONTAINER
+  image: String
+  computeType: String // BUILD_GENERAL1_SMALL, BUILD_GENERAL1_MEDIUM, BUILD_GENERAL1_LARGE, etc.
+  
+  function toDynamic() = new Mapping {
+    ["type"] = type
+    ["image"] = image
+    ["compute_type"] = computeType
+  }
+}

@@ -1,0 +1,58 @@
+module picklr.aws.XRay
+
+import "../Resource.pkl"
+
+/// An X-Ray Group.
+class Group extends Resource.Resource {
+    provider = "aws"
+
+    /// The name of the group.
+    name: String
+
+    /// The filter expression defining criteria for which traces to associate with the group.
+    filterExpression: String?
+
+    /// Key-value pairs of tags.
+    tags: Mapping<String, String>?
+}
+
+/// An X-Ray Sampling Rule.
+class SamplingRule extends Resource.Resource {
+    provider = "aws"
+
+    /// The name of the sampling rule.
+    name: String?
+
+    /// The ARN of the sampling rule.
+    arn: String?
+
+    /// Priorities for conflicting sampling rules.
+    priority: Int = 1000
+
+    /// The percentage of matching requests to instrument, after the reservoir is exhausted.
+    fixedRate: Float = 0.05
+
+    /// A fixed number of matching requests to instrument per second, prior to applying the fixed rate.
+    reservoirSize: Int = 1
+
+    /// Matches the hostname from a request URL.
+    host: String = "*"
+
+    /// Matches the HTTP method of a request.
+    httpMethod: String = "*"
+
+    /// Matches the path from a request URL.
+    urlPath: String = "*"
+
+    /// Matches the ARN of the AWS service that the request originated from.
+    serviceName: String = "*"
+
+    /// Matches the type of AWS service that the request originated from.
+    serviceType: String = "*"
+
+    /// Matches attributes that the service associates with the trace.
+    attributes: Mapping<String, String>?
+
+    /// Key-value pairs of tags.
+    tags: Mapping<String, String>?
+}

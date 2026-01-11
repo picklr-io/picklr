@@ -130,3 +130,95 @@ func (p *Provider) applyAlarm(ctx context.Context, req *pb.ApplyRequest) (*pb.Ap
 
 	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
 }
+
+// Dashboard
+type DashboardConfig struct {
+	DashboardName string `json:"dashboard_name"`
+	DashboardBody string `json:"dashboard_body"`
+}
+
+type DashboardState struct {
+	DashboardName string `json:"dashboard_name"`
+}
+
+func (p *Provider) applyDashboard(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior DashboardState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.DashboardName != "" {
+			_, err := p.cloudwatchClient.DeleteDashboards(ctx, &cloudwatch.DeleteDashboardsInput{
+				DashboardNames: []string{prior.DashboardName},
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete dashboard: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired DashboardConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	_, err := p.cloudwatchClient.PutDashboard(ctx, &cloudwatch.PutDashboardInput{
+		DashboardName: &desired.DashboardName,
+		DashboardBody: &desired.DashboardBody,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to put dashboard: %w", err)
+	}
+
+	newState := DashboardState{DashboardName: desired.DashboardName}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}
+
+// LogStream
+type LogStreamConfig struct {
+	LogGroupName  string `json:"log_group_name"`
+	LogStreamName string `json:"log_stream_name"`
+}
+
+type LogStreamState struct {
+	LogGroupName  string `json:"log_group_name"`
+	LogStreamName string `json:"log_stream_name"`
+	ARN           string `json:"arn"`
+}
+
+func (p *Provider) applyLogStream(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyResponse, error) {
+	if req.DesiredConfigJson == nil {
+		var prior LogStreamState
+		if err := json.Unmarshal(req.PriorStateJson, &prior); err == nil && prior.LogGroupName != "" {
+			_, err := p.cloudwatchlogsClient.DeleteLogStream(ctx, &cloudwatchlogs.DeleteLogStreamInput{
+				LogGroupName:  &prior.LogGroupName,
+				LogStreamName: &prior.LogStreamName,
+			})
+			if err != nil {
+				return nil, fmt.Errorf("failed to delete log stream: %w", err)
+			}
+		}
+		return &pb.ApplyResponse{}, nil
+	}
+
+	var desired LogStreamConfig
+	if err := json.Unmarshal(req.DesiredConfigJson, &desired); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal desired: %w", err)
+	}
+
+	_, err := p.cloudwatchlogsClient.CreateLogStream(ctx, &cloudwatchlogs.CreateLogStreamInput{
+		LogGroupName:  &desired.LogGroupName,
+		LogStreamName: &desired.LogStreamName,
+	})
+	if err != nil {
+		// handle already exists
+		return nil, fmt.Errorf("failed to create log stream: %w", err)
+	}
+
+	newState := LogStreamState{
+		LogGroupName:  desired.LogGroupName,
+		LogStreamName: desired.LogStreamName,
+		ARN:           fmt.Sprintf("arn:aws:logs:us-east-1:*:log-group:%s:log-stream:%s", desired.LogGroupName, desired.LogStreamName),
+	}
+	stateJSON, _ := json.Marshal(newState)
+	return &pb.ApplyResponse{NewStateJson: stateJSON}, nil
+}

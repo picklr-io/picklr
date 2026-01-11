@@ -8,8 +8,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/acm"
 	"github.com/aws/aws-sdk-go-v2/service/apigateway"
 	"github.com/aws/aws-sdk-go-v2/service/autoscaling"
+	"github.com/aws/aws-sdk-go-v2/service/codebuild"
+	"github.com/aws/aws-sdk-go-v2/service/codecommit"
+	"github.com/aws/aws-sdk-go-v2/service/codedeploy"
+	"github.com/aws/aws-sdk-go-v2/service/codepipeline"
 	"github.com/aws/aws-sdk-go-v2/service/efs"
 	"github.com/aws/aws-sdk-go-v2/service/eventbridge"
+	"github.com/aws/aws-sdk-go-v2/service/xray"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 
@@ -53,11 +58,17 @@ type Provider struct {
 	cloudfrontClient  *cloudfront.Client
 	eventbridgeClient *eventbridge.Client
 	efsClient         *efs.Client
+	xrayClient        *xray.Client
 
 	cloudwatchClient     *cloudwatch.Client
 	cloudwatchlogsClient *cloudwatchlogs.Client
 	kmsClient            *kms.Client
+
 	secretsmanagerClient *secretsmanager.Client
+	codebuildClient      *codebuild.Client
+	codecommitClient     *codecommit.Client
+	codedeployClient     *codedeploy.Client
+	codepipelineClient   *codepipeline.Client
 }
 
 func New() *Provider {
@@ -92,11 +103,20 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.cloudfrontClient = cloudfront.NewFromConfig(cfg)
 	p.eventbridgeClient = eventbridge.NewFromConfig(cfg)
 	p.efsClient = efs.NewFromConfig(cfg)
+	p.xrayClient = xray.NewFromConfig(cfg)
 
 	p.cloudwatchClient = cloudwatch.NewFromConfig(cfg)
 	p.cloudwatchlogsClient = cloudwatchlogs.NewFromConfig(cfg)
 	p.kmsClient = kms.NewFromConfig(cfg)
 	p.secretsmanagerClient = secretsmanager.NewFromConfig(cfg)
+	p.codebuildClient = codebuild.NewFromConfig(cfg)
+	p.codecommitClient = codecommit.NewFromConfig(cfg)
+	p.codedeployClient = codedeploy.NewFromConfig(cfg)
+	p.codepipelineClient = codepipeline.NewFromConfig(cfg)
+	p.codebuildClient = codebuild.NewFromConfig(cfg)
+	p.codecommitClient = codecommit.NewFromConfig(cfg)
+	p.codedeployClient = codedeploy.NewFromConfig(cfg)
+	p.codepipelineClient = codepipeline.NewFromConfig(cfg)
 
 	return nil
 }
@@ -235,6 +255,8 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyAlias(ctx, req)
 	case "aws:SecretsManager.Secret":
 		return p.applySecret(ctx, req)
+	case "aws:SecretsManager.SecretPolicy":
+		return p.applySecretPolicy(ctx, req)
 	case "aws:SecretsManager.SecretVersion":
 		return p.applySecretVersion(ctx, req)
 	case "aws:ACM.Certificate":
@@ -290,11 +312,30 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyFileSystem(ctx, req)
 	case "aws:EFS.MountTarget":
 		return p.applyMountTarget(ctx, req)
-
 	case "aws:S3.BucketLifecycle":
 		return p.applyBucketLifecycle(ctx, req)
 	case "aws:S3.BucketNotification":
 		return p.applyBucketNotification(ctx, req)
+	case "aws:ELBv2.ListenerRule":
+		return p.applyListenerRule(ctx, req)
+	case "aws:CloudWatch.LogStream":
+		return p.applyLogStream(ctx, req)
+	case "aws:CloudWatch.Dashboard":
+		return p.applyDashboard(ctx, req)
+	case "aws:CodeBuild.Project":
+		return p.applyProject(ctx, req)
+	case "aws:CodePipeline.Pipeline":
+		return p.applyPipeline(ctx, req)
+	case "aws:CodeDeploy.Application":
+		return p.applyApplication(ctx, req)
+	case "aws:CodeDeploy.DeploymentGroup":
+		return p.applyDeploymentGroup(ctx, req)
+	case "aws:CodeCommit.Repository":
+		return p.applyCodeCommitRepository(ctx, req)
+	case "aws:XRay.Group":
+		return p.applyXRayGroup(ctx, req)
+	case "aws:XRay.SamplingRule":
+		return p.applySamplingRule(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)

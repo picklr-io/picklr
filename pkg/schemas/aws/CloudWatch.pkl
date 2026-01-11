@@ -57,3 +57,35 @@ class Alarm extends Resource.Resource {
     ["statistic"] = statistic
   }
 }
+
+/// A CloudWatch Dashboard.
+class Dashboard extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the dashboard.
+  dashboardName: String
+  
+  /// The detailed dashboard body in JSON format.
+  dashboardBody: String
+
+  properties = new Mapping {
+    ["dashboard_name"] = dashboardName
+    ["dashboard_body"] = dashboardBody
+  }
+}
+
+/// A CloudWatch Log Stream.
+class LogStream extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the log group.
+  logGroupName: String
+  
+  /// The name of the log stream.
+  logStreamName: String
+
+  properties = new Mapping {
+    ["log_group_name"] = logGroupName
+    ["log_stream_name"] = logStreamName
+  }
+}

@@ -1,0 +1,55 @@
+module picklr.aws.CodeDeploy
+
+import "../Resource.pkl"
+
+/// A CodeDeploy Application.
+class Application extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the application.
+  applicationName: String
+  
+  /// The compute platform.
+  computePlatform: String = "Server" // Server, Lambda, ECS
+
+  properties = new Mapping {
+    ["application_name"] = applicationName
+    ["compute_platform"] = computePlatform
+  }
+}
+
+/// A CodeDeploy Deployment Group.
+class DeploymentGroup extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the deployment group.
+  deploymentGroupName: String
+  
+  /// The application name.
+  applicationName: String
+  
+  /// The service role ARN.
+  serviceRoleArn: String
+  
+  /// The EC2 tag filters.
+  ec2TagFilters: Listing<EC2TagFilter>?
+
+  properties = new Mapping {
+    ["deployment_group_name"] = deploymentGroupName
+    ["application_name"] = applicationName
+    ["service_role_arn"] = serviceRoleArn
+    ["ec2_tag_filters"] = if (ec2TagFilters != null) ec2TagFilters.toList().map((f) -> f.toDynamic()) else null
+  }
+}
+
+class EC2TagFilter {
+  key: String?
+  value: String?
+  type: String = "KEY_AND_VALUE"
+  
+  function toDynamic() = new Mapping {
+    ["key"] = key
+    ["value"] = value
+    ["type"] = type
+  }
+}

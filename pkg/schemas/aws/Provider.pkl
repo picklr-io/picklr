@@ -22,6 +22,11 @@ import "S3.pkl"
 import "SecretsManager.pkl"
 import "SNS.pkl"
 import "SQS.pkl"
+import "CodeBuild.pkl"
+import "CodePipeline.pkl"
+import "CodeDeploy.pkl"
+import "CodeCommit.pkl"
+import "XRay.pkl"
 
 /// Configuration for the AWS Provider.
 class Config {
@@ -176,6 +181,9 @@ class Config {
   /// List of ELBv2 Listeners.
   listeners: Listing<ELBv2.Listener>?
 
+  /// List of ELBv2 Listener Rules.
+  listenerRules: Listing<ELBv2.ListenerRule>?
+
   /// List of Route53 Hosted Zones.
   hostedZones: Listing<Route53.HostedZone>?
 
@@ -209,17 +217,47 @@ class Config {
   /// List of KMS Aliases.
   aliases: Listing<KMS.Alias>?
 
+  /// List of CloudWatch Dashboards.
+  dashboards: Listing<CloudWatch.Dashboard>?
+
+  /// List of CloudWatch Log Streams.
+  logStreams: Listing<CloudWatch.LogStream>?
+
   /// List of Secrets Manager Secrets.
   secrets: Listing<SecretsManager.Secret>?
 
+  /// List of Secrets Manager Secret Policies.
+  secretPolicies: Listing<SecretsManager.SecretPolicy>?
+
   /// List of Secrets Manager Secret Versions.
   secretVersions: Listing<SecretsManager.SecretVersion>?
+
+  /// List of CodeBuild Projects.
+  codeBuildProjects: Listing<CodeBuild.Project>?
+
+  /// List of CodePipelines.
+  codePipelines: Listing<CodePipeline.Pipeline>?
+
+  /// List of CodeDeploy Applications.
+  codeDeployApplications: Listing<CodeDeploy.Application>?
+
+  /// List of CodeDeploy Deployment Groups.
+  codeDeployDeploymentGroups: Listing<CodeDeploy.DeploymentGroup>?
+
+  /// List of CodeCommit Repositories.
+  codeCommitRepositories: Listing<CodeCommit.Repository>?
 
   /// List of ACM Certificates.
   certificates: Listing<ACM.Certificate>?
 
   /// List of ACM Certificate Validations.
   certificateValidations: Listing<ACM.CertificateValidation>?
+
+  /// List of X-Ray Groups.
+  xrayGroups: Listing<XRay.Group>?
+
+  /// List of X-Ray Sampling Rules.
+  samplingRules: Listing<XRay.SamplingRule>?
 
   /// List of EventBridge Event Buses.
   eventBuses: Listing<EventBridge.EventBus>?
@@ -242,8 +280,28 @@ class Config {
   /// List of S3 Bucket Notifications.
   bucketNotifications: Listing<S3.BucketNotification>?
 
+
   /// Flattened list of all AWS resources.
   allResources: Listing<Resource.Resource> = new Listing {
+    ...(if (listeners != null) listeners else new Listing {})
+    ...(if (listenerRules != null) listenerRules else new Listing {})
+    ...(if (targetGroups != null) targetGroups else new Listing {})
+    ...(if (keys != null) keys else new Listing {})
+    ...(if (aliases != null) aliases else new Listing {})
+    ...(if (secrets != null) secrets else new Listing {})
+    ...(if (secretPolicies != null) secretPolicies else new Listing {})
+    ...(if (secretVersions != null) secretVersions else new Listing {})
+    ...(if (certificates != null) certificates else new Listing {})
+    ...(if (certificateValidations != null) certificateValidations else new Listing {})
+    ...(if (logGroups != null) logGroups else new Listing {})
+    ...(if (logStreams != null) logStreams else new Listing {})
+    ...(if (alarms != null) alarms else new Listing {})
+    ...(if (dashboards != null) dashboards else new Listing {})
+    ...(if (codeBuildProjects != null) codeBuildProjects else new Listing {})
+    ...(if (codePipelines != null) codePipelines else new Listing {})
+    ...(if (codeDeployApplications != null) codeDeployApplications else new Listing {})
+    ...(if (codeDeployDeploymentGroups != null) codeDeployDeploymentGroups else new Listing {})
+    ...(if (codeCommitRepositories != null) codeCommitRepositories else new Listing {})
     ...(if (buckets != null) buckets else new Listing {})
     ...(if (instances != null) instances else new Listing {})
     ...(if (launchTemplates != null) launchTemplates else new Listing {})
@@ -291,6 +349,7 @@ class Config {
     ...(if (loadBalancers != null) loadBalancers else new Listing {})
     ...(if (targetGroups != null) targetGroups else new Listing {})
     ...(if (listeners != null) listeners else new Listing {})
+    ...(if (listenerRules != null) listenerRules else new Listing {})
     ...(if (hostedZones != null) hostedZones else new Listing {})
     ...(if (recordSets != null) recordSets else new Listing {})
     ...(if (restApis != null) restApis else new Listing {})
@@ -308,11 +367,12 @@ class Config {
     ...(if (certificateValidations != null) certificateValidations else new Listing {})
     ...(if (eventBuses != null) eventBuses else new Listing {})
     ...(if (rules != null) rules else new Listing {})
-    ...(if (rules != null) rules else new Listing {})
     ...(if (targets != null) targets else new Listing {})
     ...(if (fileSystems != null) fileSystems else new Listing {})
     ...(if (mountTargets != null) mountTargets else new Listing {})
     ...(if (bucketLifecycles != null) bucketLifecycles else new Listing {})
     ...(if (bucketNotifications != null) bucketNotifications else new Listing {})
+    ...(if (xrayGroups != null) xrayGroups else new Listing {})
+    ...(if (samplingRules != null) samplingRules else new Listing {})
   }
 }

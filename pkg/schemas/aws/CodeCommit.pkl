@@ -1,0 +1,19 @@
+module picklr.aws.CodeCommit
+
+import "../Resource.pkl"
+
+/// A CodeCommit Repository.
+class Repository extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the repository.
+  repositoryName: String
+  
+  /// The description.
+  description: String?
+
+  properties = new Mapping {
+    ["repository_name"] = repositoryName
+    ["description"] = description
+  }
+}

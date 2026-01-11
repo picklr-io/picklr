@@ -1,0 +1,89 @@
+module picklr.aws.CodePipeline
+
+import "../Resource.pkl"
+
+/// A CodePipeline.
+class Pipeline extends Resource.Resource {
+  provider = "aws"
+  
+  /// The name of the pipeline.
+  name: String
+  
+  /// The role ARN.
+  roleArn: String
+  
+  /// The artifact store.
+  artifactStore: ArtifactStore
+  
+  /// The stages.
+  stages: Listing<Stage>
+
+  properties = new Mapping {
+    ["name"] = name
+    ["role_arn"] = roleArn
+    ["artifact_store"] = artifactStore.toDynamic()
+    ["stages"] = stages.toList().map((s) -> s.toDynamic())
+  }
+}
+
+class ArtifactStore {
+  type: String = "S3"
+  location: String
+  
+  function toDynamic() = new Mapping {
+    ["type"] = type
+    ["location"] = location
+  }
+}
+
+class Stage {
+  name: String
+  actions: Listing<Action>
+  
+  function toDynamic() = new Mapping {
+    ["name"] = name
+    ["actions"] = actions.toList().map((a) -> a.toDynamic())
+  }
+}
+
+class Action {
+  name: String
+  actionTypeId: ActionTypeId
+  runOrder: Int = 1
+  configuration: Mapping<String, String>?
+  outputArtifacts: Listing<OutputArtifact>?
+  inputArtifacts: Listing<InputArtifact>?
+  
+  function toDynamic() = new Mapping {
+    ["name"] = name
+    ["action_type_id"] = actionTypeId.toDynamic()
+    ["run_order"] = runOrder
+    ["configuration"] = configuration
+    ["output_artifacts"] = if (outputArtifacts != null) outputArtifacts.toList().map((a) -> a.toDynamic()) else null
+    ["input_artifacts"] = if (inputArtifacts != null) inputArtifacts.toList().map((a) -> a.toDynamic()) else null
+  }
+}
+
+class ActionTypeId {
+  category: String // Source, Build, Deploy, Test, Invoke, Approval
+  owner: String // AWS, ThirdParty, Custom
+  provider: String // CodeCommit, CodeBuild, CodeDeploy, S3, etc.
+  version: String = "1"
+  
+  function toDynamic() = new Mapping {
+    ["category"] = category
+    ["owner"] = owner
+    ["provider"] = provider
+    ["version"] = version
+  }
+}
+
+class OutputArtifact {
+  name: String
+  function toDynamic() = new Mapping { ["name"] = name }
+}
+
+class InputArtifact {
+  name: String
+  function toDynamic() = new Mapping { ["name"] = name }
+}

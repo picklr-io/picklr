@@ -92,3 +92,68 @@ class Action {
   type: String = "forward"
   targetGroupArn: String?
 }
+
+/// A Listener Rule.
+class ListenerRule extends Resource.Resource {
+  provider = "aws"
+  
+  /// The ARN of the listener.
+  listenerArn: String
+  
+  /// The priority for the rule.
+  priority: Int
+  
+  /// The actions.
+  actions: Listing<Action>
+  
+  /// The conditions.
+  conditions: Listing<Condition>
+
+  properties = new Mapping {
+    ["listener_arn"] = listenerArn
+    ["priority"] = priority
+    ["actions"] =
+      actions
+        .toList()
+        .map((a) -> new Mapping {
+          ["type"] = a.type
+          ["target_group_arn"] = a.targetGroupArn
+        })
+    ["conditions"] =
+      conditions
+        .toList()
+        .map((c) -> c.toDynamic())
+  }
+}
+
+class Condition {
+  field: String? = null // path-pattern, host-header, etc.
+  values: Listing<String>? = null
+  
+  // Simplistic generic structure
+  hostHeaderConfig: HostHeaderConfig? = null
+  pathPatternConfig: PathPatternConfig? = null
+  
+  function toDynamic() = new Mapping {
+    ["field"] = field
+    ["values"] = values
+    ["host_header_config"] = if (hostHeaderConfig != null) hostHeaderConfig.toDynamic() else null
+    ["path_pattern_config"] = if (pathPatternConfig != null) pathPatternConfig.toDynamic() else null
+  }
+}
+
+class HostHeaderConfig {
+  values: Listing<String>
+  
+  function toDynamic() = new Mapping {
+    ["values"] = values
+  }
+}
+
+class PathPatternConfig {
+  values: Listing<String>
+  
+  function toDynamic() = new Mapping {
+    ["values"] = values
+  }
+}

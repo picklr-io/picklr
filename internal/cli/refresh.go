@@ -31,7 +31,7 @@ func runRefresh(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 	registry := provider.NewRegistry()
 
 	// Lock state
@@ -93,7 +93,7 @@ func runRefresh(cmd *cobra.Command, args []string) error {
 		}
 
 		if !resp.Exists {
-			fmt.Printf("  \033[31m%s: DELETED (no longer exists in provider)\033[0m\n", addr)
+			fmt.Printf("  %s%s: DELETED (no longer exists in provider)%s\n", colorize("\033[31m"), addr, colorize("\033[0m"))
 			deleted++
 			continue
 		}
@@ -103,7 +103,7 @@ func runRefresh(cmd *cobra.Command, args []string) error {
 			var newOutputs map[string]any
 			if err := json.Unmarshal(resp.NewStateJson, &newOutputs); err == nil {
 				if fmt.Sprintf("%v", newOutputs) != fmt.Sprintf("%v", res.Outputs) {
-					fmt.Printf("  \033[33m%s: DRIFTED (state updated)\033[0m\n", addr)
+					fmt.Printf("  %s%s: DRIFTED (state updated)%s\n", colorize("\033[33m"), addr, colorize("\033[0m"))
 					res.Outputs = newOutputs
 					drifted++
 				} else {

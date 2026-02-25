@@ -35,7 +35,7 @@ func runTaint(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 
 	if err := stateMgr.Lock(); err != nil {
 		return err
@@ -74,7 +74,7 @@ func runUntaint(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 
 	if err := stateMgr.Lock(); err != nil {
 		return err

@@ -1,0 +1,93 @@
+name: 'Picklr IaC Action'
+description: 'Run Picklr Infrastructure as Code operations in CI/CD'
+branding:
+  icon: 'cloud'
+  color: 'blue'
+
+inputs:
+  command:
+    description: 'Picklr command to run (plan, apply, destroy, validate)'
+    required: true
+    default: 'plan'
+  working-directory:
+    description: 'Working directory for Picklr'
+    required: false
+    default: '.'
+  auto-approve:
+    description: 'Auto-approve apply/destroy (use with caution)'
+    required: false
+    default: 'false'
+  version:
+    description: 'Picklr version to install'
+    required: false
+    default: 'latest'
+  targets:
+    description: 'Comma-separated list of resource targets'
+    required: false
+    default: ''
+
+outputs:
+  plan-json:
+    description: 'Plan output in JSON format'
+    value: ${{ steps.run.outputs.plan-json }}
+  exit-code:
+    description: 'Exit code of the Picklr command'
+    value: ${{ steps.run.outputs.exit-code }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Picklr
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          go install github.com/picklr-io/picklr/cmd/picklr@latest
+        else
+          go install github.com/picklr-io/picklr/cmd/picklr@${{ inputs.version }}
+        fi
+
+    - name: Run Picklr
+      id: run
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        ARGS=""
+
+        if [ "${{ inputs.command }}" = "apply" ] || [ "${{ inputs.command }}" = "destroy" ]; then
+          if [ "${{ inputs.auto-approve }}" = "true" ]; then
+            ARGS="$ARGS --auto-approve"
+          fi
+        fi
+
+        if [ -n "${{ inputs.targets }}" ]; then
+          IFS=',' read -ra TARGETS <<< "${{ inputs.targets }}"
+          for target in "${TARGETS[@]}"; do
+            ARGS="$ARGS --target=$target"
+          done
+        fi
+
+        # Run with JSON output for plan
+        if [ "${{ inputs.command }}" = "plan" ]; then
+          picklr plan --json $ARGS > plan-output.json 2>&1 || true
+          echo "plan-json=$(cat plan-output.json)" >> $GITHUB_OUTPUT
+        fi
+
+        set +e
+        picklr ${{ inputs.command }} $ARGS
+        EXIT_CODE=$?
+        echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+        set -e
+
+        exit $EXIT_CODE
+
+    - name: Comment PR with Plan
+      if: inputs.command == 'plan' && github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        if [ -f "${{ inputs.working-directory }}/plan-output.json" ]; then
+          PLAN=$(cat "${{ inputs.working-directory }}/plan-output.json")
+          BODY="## Picklr Plan Output\n\n\`\`\`\n${PLAN}\n\`\`\`"
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY" || true
+        fi
+      env:
+        GH_TOKEN: ${{ github.token }}

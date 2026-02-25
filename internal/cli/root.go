@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/picklr-io/picklr/internal/logging"
 	"github.com/spf13/cobra"
 )
 
@@ -16,10 +17,13 @@ var rootCmd = &cobra.Command{
 	Long: `Picklr is a type-safe infrastructure as code tool built on Apple's PKL language.
 
 It provides a clean, deterministic way to manage cloud infrastructure with:
-  • Type-safe resource definitions
-  • Git-native state management
-  • Human-readable plans and state files
-  • Unified language for config, plans, and state`,
+  - Type-safe resource definitions
+  - Git-native state management
+  - Human-readable plans and state files
+  - Unified language for config, plans, and state`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		logging.Init(logLevel)
+	},
 }
 
 // Execute runs the root command
@@ -45,4 +49,10 @@ func init() {
 	rootCmd.AddCommand(graphCmd)
 	rootCmd.AddCommand(taintCmd)
 	rootCmd.AddCommand(untaintCmd)
+	rootCmd.AddCommand(workspaceCmd)
+	rootCmd.AddCommand(fmtCmd)
+	rootCmd.AddCommand(consoleCmd)
+	rootCmd.AddCommand(policyCmd)
+	rootCmd.AddCommand(migrateCmd)
+	rootCmd.AddCommand(versionCmd)
 }

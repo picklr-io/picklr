@@ -58,7 +58,7 @@ func loadStateMgr() (*state.Manager, error) {
 		return nil, fmt.Errorf("failed to get working directory: %w", err)
 	}
 	evaluator := eval.NewEvaluator(wd)
-	return state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator), nil
+	return state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator), nil
 }
 
 func runStateList(cmd *cobra.Command, args []string) error {

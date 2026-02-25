@@ -15,6 +15,8 @@ import (
 
 var (
 	planOutFile string
+	planJSON    bool
+	planRefresh bool
 )
 
 var planCmd = &cobra.Command{
@@ -24,14 +26,16 @@ var planCmd = &cobra.Command{
 to reach the desired state defined in your configuration.
 
 The plan shows:
-  • Resources to be created
-  • Resources to be updated (with diff)
-  • Resources to be deleted`,
+  - Resources to be created
+  - Resources to be updated (with diff)
+  - Resources to be deleted`,
 	RunE: runPlan,
 }
 
 func init() {
 	planCmd.Flags().StringVarP(&planOutFile, "out", "o", "", "Write plan to file")
+	planCmd.Flags().BoolVar(&planJSON, "json", false, "Output in JSON format")
+	planCmd.Flags().BoolVar(&planRefresh, "refresh", false, "Refresh state before planning")
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
@@ -63,18 +67,24 @@ func runPlan(cmd *cobra.Command, args []string) error {
 
 	// 1. Initialize Components
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 	registry := provider.NewRegistry()
 	eng := engine.NewEngine(registry)
 
 	// 2. Load Config
-	fmt.Print("Loading configuration... ")
+	if !planJSON {
+		fmt.Print("Loading configuration... ")
+	}
 	cfg, err := evaluator.LoadConfig(ctx, entryPoint, nil)
 	if err != nil {
-		fmt.Println("FAILED")
+		if !planJSON {
+			fmt.Println("FAILED")
+		}
 		return fmt.Errorf("failed to load config: %w", err)
 	}
-	fmt.Println("OK")
+	if !planJSON {
+		fmt.Println("OK")
+	}
 
 	// Auto-load providers required by the config
 	if err := loadRequiredProviders(registry, cfg); err != nil {
@@ -92,16 +102,38 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// 3.5 Auto-refresh if requested
+	if planRefresh && len(currentState.Resources) > 0 {
+		if !planJSON {
+			fmt.Print("Refreshing state... ")
+		}
+		drifted := refreshStateInPlace(ctx, currentState, registry)
+		if !planJSON {
+			fmt.Println("OK")
+			renderDriftChanges(drifted)
+		}
+	}
+
 	// 4. Create Plan
-	fmt.Print("Calculating plan... ")
-	plan, err := eng.CreatePlan(ctx, cfg, currentState)
+	if !planJSON {
+		fmt.Print("Calculating plan... ")
+	}
+	plan, err := eng.CreatePlanWithTargets(ctx, cfg, currentState, targets)
 	if err != nil {
-		fmt.Println("FAILED")
+		if !planJSON {
+			fmt.Println("FAILED")
+		}
 		return fmt.Errorf("plan generation failed: %w", err)
 	}
-	fmt.Println("OK")
+	if !planJSON {
+		fmt.Println("OK")
+	}
 
 	// 5. Output
+	if planJSON {
+		return renderPlanJSON(plan, cliOutput())
+	}
+
 	if len(plan.Changes) > 0 {
 		fmt.Println("\nPicklr will perform the following actions:")
 		renderPlanChanges(plan)
@@ -113,11 +145,11 @@ func runPlan(cmd *cobra.Command, args []string) error {
 
 	// Save plan to file if requested
 	if planOutFile != "" {
-		planJSON, err := json.MarshalIndent(plan, "", "  ")
+		planJSONData, err := json.MarshalIndent(plan, "", "  ")
 		if err != nil {
 			return fmt.Errorf("failed to marshal plan: %w", err)
 		}
-		if err := os.WriteFile(planOutFile, planJSON, 0644); err != nil {
+		if err := os.WriteFile(planOutFile, planJSONData, 0644); err != nil {
 			return fmt.Errorf("failed to write plan to %s: %w", planOutFile, err)
 		}
 		fmt.Printf("\nPlan saved to %s\n", planOutFile)

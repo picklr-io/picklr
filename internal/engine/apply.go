@@ -8,8 +8,11 @@ import (
 	"time"
 
 	"github.com/picklr-io/picklr/internal/ir"
+	"github.com/picklr-io/picklr/internal/logging"
 	pb "github.com/picklr-io/picklr/pkg/proto/provider"
 )
+
+const defaultParallelism = 10
 
 // ApplyEvent represents a progress event during apply.
 type ApplyEvent struct {
@@ -29,6 +32,7 @@ func (e *Engine) ApplyPlan(ctx context.Context, plan *ir.Plan, state *ir.State) 
 }
 
 // ApplyPlanWithCallback executes a plan with progress event callbacks.
+// It applies resources in parallel respecting dependency ordering.
 func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state *ir.State, callback ApplyCallback) (*ir.State, error) {
 	var mu sync.Mutex
 
@@ -46,7 +50,6 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 	}
 
 	// Group changes: separate creates/updates from deletes
-	// Deletes happen after creates (for REPLACE, create-before-destroy)
 	var createUpdates, deletes []*ir.ResourceChange
 	for _, change := range plan.Changes {
 		if change.Action == "DELETE" {
@@ -56,38 +59,45 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 		}
 	}
 
-	// Apply creates/updates (sequentially to respect dependency order, which is already sorted)
-	for _, change := range createUpdates {
-		if err := ctx.Err(); err != nil {
-			return state, fmt.Errorf("apply cancelled: %w", err)
-		}
-
-		start := time.Now()
-		emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "started"})
-
-		if err := e.applyChange(ctx, change, state, &stateIndex, &mu); err != nil {
-			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "failed", Duration: time.Since(start), Error: err})
+	// Build dependency graph for parallel execution of creates/updates
+	if len(createUpdates) > 1 {
+		if err := e.applyParallel(ctx, createUpdates, state, &stateIndex, &mu, emit); err != nil {
 			return state, err
 		}
-
-		emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "completed", Duration: time.Since(start)})
+	} else {
+		// Single change or empty - apply sequentially
+		for _, change := range createUpdates {
+			if err := ctx.Err(); err != nil {
+				return state, fmt.Errorf("apply cancelled: %w", err)
+			}
+			start := time.Now()
+			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "started"})
+			if err := e.applyChange(ctx, change, state, &stateIndex, &mu); err != nil {
+				emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "failed", Duration: time.Since(start), Error: err})
+				return state, err
+			}
+			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "completed", Duration: time.Since(start)})
+		}
 	}
 
-	// Apply deletes
-	for _, change := range deletes {
-		if err := ctx.Err(); err != nil {
-			return state, fmt.Errorf("apply cancelled: %w", err)
-		}
-
-		start := time.Now()
-		emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "started"})
-
-		if err := e.applyChange(ctx, change, state, &stateIndex, &mu); err != nil {
-			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "failed", Duration: time.Since(start), Error: err})
+	// Apply deletes (reverse dependency order, parallel where possible)
+	if len(deletes) > 1 {
+		if err := e.applyParallel(ctx, deletes, state, &stateIndex, &mu, emit); err != nil {
 			return state, err
 		}
-
-		emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "completed", Duration: time.Since(start)})
+	} else {
+		for _, change := range deletes {
+			if err := ctx.Err(); err != nil {
+				return state, fmt.Errorf("apply cancelled: %w", err)
+			}
+			start := time.Now()
+			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "started"})
+			if err := e.applyChange(ctx, change, state, &stateIndex, &mu); err != nil {
+				emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "failed", Duration: time.Since(start), Error: err})
+				return state, err
+			}
+			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "completed", Duration: time.Since(start)})
+		}
 	}
 
 	state.Serial++
@@ -96,8 +106,135 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 	return state, nil
 }
 
+// applyParallel applies changes concurrently, respecting the dependency order
+// embedded in the plan (which is already topologically sorted).
+func (e *Engine) applyParallel(ctx context.Context, changes []*ir.ResourceChange, state *ir.State, stateIndex *map[string]int, mu *sync.Mutex, emit func(ApplyEvent)) error {
+	// Build a mini dependency graph from the changes
+	// The plan is already in dependency order, so we can use the position
+	// to determine which resources can run in parallel.
+	changeMap := make(map[string]*ir.ResourceChange)
+	for _, c := range changes {
+		changeMap[c.Address] = c
+	}
+
+	// Track dependencies: for each change, find which other changes it depends on
+	deps := make(map[string]map[string]bool)
+	for _, c := range changes {
+		deps[c.Address] = make(map[string]bool)
+		if c.Desired != nil {
+			// Check DependsOn
+			for _, d := range c.Desired.DependsOn {
+				if _, ok := changeMap[d]; ok {
+					deps[c.Address][d] = true
+				}
+			}
+			// Check ptr:// references
+			refs := extractPtrRefs(c.Desired.Properties)
+			for _, ref := range refs {
+				depAddr := ptrRefToAddr(ref)
+				if _, ok := changeMap[depAddr]; ok {
+					deps[c.Address][depAddr] = true
+				}
+			}
+		}
+	}
+
+	// Parallel execution using a semaphore and dependency tracking
+	completed := make(map[string]bool)
+	completedMu := sync.Mutex{}
+	completedCond := sync.NewCond(&completedMu)
+	var firstErr error
+	sem := make(chan struct{}, defaultParallelism)
+
+	var wg sync.WaitGroup
+
+	for _, change := range changes {
+		wg.Add(1)
+		go func(c *ir.ResourceChange) {
+			defer wg.Done()
+
+			// Wait for dependencies to complete
+			completedMu.Lock()
+			for {
+				if firstErr != nil {
+					completedMu.Unlock()
+					return
+				}
+				allDepsReady := true
+				for dep := range deps[c.Address] {
+					if !completed[dep] {
+						allDepsReady = false
+						break
+					}
+				}
+				if allDepsReady {
+					break
+				}
+				completedCond.Wait()
+			}
+			completedMu.Unlock()
+
+			if err := ctx.Err(); err != nil {
+				completedMu.Lock()
+				if firstErr == nil {
+					firstErr = fmt.Errorf("apply cancelled: %w", err)
+				}
+				completedMu.Unlock()
+				completedCond.Broadcast()
+				return
+			}
+
+			// Acquire semaphore slot
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			start := time.Now()
+			emit(ApplyEvent{Address: c.Address, Action: c.Action, Status: "started"})
+
+			if err := e.applyChange(ctx, c, state, stateIndex, mu); err != nil {
+				emit(ApplyEvent{Address: c.Address, Action: c.Action, Status: "failed", Duration: time.Since(start), Error: err})
+				completedMu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				completedMu.Unlock()
+				completedCond.Broadcast()
+				return
+			}
+
+			emit(ApplyEvent{Address: c.Address, Action: c.Action, Status: "completed", Duration: time.Since(start)})
+
+			completedMu.Lock()
+			completed[c.Address] = true
+			completedMu.Unlock()
+			completedCond.Broadcast()
+		}(change)
+	}
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return firstErr
+	}
+	return nil
+}
+
 func (e *Engine) applyChange(ctx context.Context, change *ir.ResourceChange, state *ir.State, stateIndex *map[string]int, mu *sync.Mutex) error {
 	addr := change.Address
+	logging.Debug("applying change", "address", addr, "action", change.Action)
+
+	// Apply per-resource timeout if configured
+	var timeout time.Duration
+	if change.Desired != nil && change.Desired.Timeout != "" {
+		if d, err := time.ParseDuration(change.Desired.Timeout); err == nil {
+			timeout = d
+		}
+	}
+	if timeout <= 0 {
+		timeout = DefaultTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 
 	var desiredJSON []byte
 	var priorJSON []byte
@@ -107,7 +244,9 @@ func (e *Engine) applyChange(ctx context.Context, change *ir.ResourceChange, sta
 		name = change.Desired.Name
 		typ = change.Desired.Type
 		props := normalizeValue(change.Desired.Properties)
+		mu.Lock()
 		resolvedProps := resolveReferences(props, state)
+		mu.Unlock()
 		desiredJSON, _ = json.Marshal(resolvedProps)
 	} else if change.Prior != nil {
 		name = change.Prior.Name
@@ -135,14 +274,21 @@ func (e *Engine) applyChange(ctx context.Context, change *ir.ResourceChange, sta
 		return fmt.Errorf("provider not found: %s", provName)
 	}
 
+	retryPolicy := DefaultRetryPolicy()
+
 	switch change.Action {
 	case "CREATE", "UPDATE", "REPLACE":
-		resp, err := prov.Apply(ctx, &pb.ApplyRequest{
-			Type:              typ,
-			Name:              name,
-			DesiredConfigJson: desiredJSON,
-			PriorStateJson:    priorJSON,
-		})
+		var resp *pb.ApplyResponse
+		err := RetryWithBackoff(ctx, retryPolicy, func() error {
+			var applyErr error
+			resp, applyErr = prov.Apply(ctx, &pb.ApplyRequest{
+				Type:              typ,
+				Name:              name,
+				DesiredConfigJson: desiredJSON,
+				PriorStateJson:    priorJSON,
+			})
+			return applyErr
+		}, IsTransientError)
 		if err != nil {
 			return fmt.Errorf("apply failed for %s: %w", addr, err)
 		}
@@ -181,11 +327,14 @@ func (e *Engine) applyChange(ctx context.Context, change *ir.ResourceChange, sta
 		}
 		mu.Unlock()
 
-		_, err := prov.Delete(ctx, &pb.DeleteRequest{
-			Type:             typ,
-			Id:               resourceID,
-			CurrentStateJson: priorJSON,
-		})
+		err := RetryWithBackoff(ctx, retryPolicy, func() error {
+			_, deleteErr := prov.Delete(ctx, &pb.DeleteRequest{
+				Type:             typ,
+				Id:               resourceID,
+				CurrentStateJson: priorJSON,
+			})
+			return deleteErr
+		}, IsTransientError)
 		if err != nil {
 			return fmt.Errorf("delete failed for %s: %w", addr, err)
 		}

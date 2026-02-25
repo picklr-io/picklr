@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/picklr-io/picklr/internal/ir"
+	"github.com/picklr-io/picklr/internal/logging"
 	"github.com/picklr-io/picklr/internal/provider"
 	pb "github.com/picklr-io/picklr/pkg/proto/provider"
 )
@@ -24,6 +25,13 @@ func NewEngine(registry *provider.Registry) *Engine {
 
 // CreatePlan generates an execution plan by comparing desired config with current state.
 func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State) (*ir.Plan, error) {
+	return e.CreatePlanWithTargets(ctx, cfg, state, nil)
+}
+
+// CreatePlanWithTargets generates a plan filtered to specific resource addresses.
+// If targets is nil or empty, all resources are planned.
+func (e *Engine) CreatePlanWithTargets(ctx context.Context, cfg *ir.Config, state *ir.State, targets []string) (*ir.Plan, error) {
+	logging.Debug("creating plan", "resources", len(cfg.Resources), "state_resources", len(state.Resources), "targets", len(targets))
 	plan := &ir.Plan{
 		Metadata: &ir.PlanMetadata{
 			Timestamp: time.Now().UTC().Format(time.RFC3339),
@@ -39,6 +47,9 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 			return nil, fmt.Errorf("failed to load provider %s: %w", res.Provider, err)
 		}
 	}
+
+	// 1.5 Expand for_each/count resources
+	cfg.Resources = ExpandForEach(cfg.Resources)
 
 	// 2. Build dependency graph for ordering
 	dag, err := BuildDAG(cfg.Resources)
@@ -60,10 +71,31 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 		configByAddr[addr] = res
 	}
 
-	// 5. Iterate desired resources in dependency order
+	// 5. Build target set (if targets specified, include their dependencies)
+	var targetSet map[string]bool
+	if len(targets) > 0 {
+		targetSet = make(map[string]bool)
+		for _, t := range targets {
+			targetSet[t] = true
+		}
+		// Add transitive dependencies of targets
+		for _, t := range targets {
+			for _, dep := range dag.TransitiveDeps(t) {
+				targetSet[dep] = true
+			}
+		}
+	}
+
+	// 6. Iterate desired resources in dependency order
 	for _, addr := range dag.CreationOrder() {
 		res, ok := configByAddr[addr]
 		if !ok {
+			continue
+		}
+
+		// Skip non-targeted resources
+		if targetSet != nil && !targetSet[addr] {
+			plan.Summary.NoOp++
 			continue
 		}
 
@@ -151,7 +183,7 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 		}
 	}
 
-	// 6. Handle Deletions (resources in state but not in config)
+	// 7. Handle Deletions (resources in state but not in config)
 	configMap := make(map[string]bool)
 	for _, res := range cfg.Resources {
 		addr := resourceAddr(res)
@@ -161,6 +193,10 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 	for _, res := range state.Resources {
 		addr := fmt.Sprintf("%s.%s", res.Type, res.Name)
 		if !configMap[addr] {
+			// Skip non-targeted resources for deletion too
+			if targetSet != nil && !targetSet[addr] {
+				continue
+			}
 			change := &ir.ResourceChange{
 				Address: addr,
 				Action:  "DELETE",

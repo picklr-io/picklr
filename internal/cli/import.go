@@ -57,7 +57,7 @@ func runImport(cmd *cobra.Command, args []string) error {
 
 	ctx := cmd.Context()
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 	registry := provider.NewRegistry()
 
 	// Lock state

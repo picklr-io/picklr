@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/picklr-io/picklr/internal/engine"
 	"github.com/picklr-io/picklr/internal/eval"
@@ -15,6 +16,7 @@ import (
 
 var (
 	destroyAutoApprove bool
+	destroyJSON        bool
 )
 
 var destroyCmd = &cobra.Command{
@@ -29,6 +31,7 @@ tracked in the state file.`,
 
 func init() {
 	destroyCmd.Flags().BoolVar(&destroyAutoApprove, "auto-approve", false, "Skip interactive approval before destroying")
+	destroyCmd.Flags().BoolVar(&destroyJSON, "json", false, "Output in JSON format")
 }
 
 func runDestroy(cmd *cobra.Command, args []string) error {
@@ -57,7 +60,7 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 
 	// 1. Initialize components
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 	registry := provider.NewRegistry()
 	eng := engine.NewEngine(registry)
 
@@ -68,20 +71,28 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 	defer stateMgr.Unlock()
 
 	// 3. Read state
-	fmt.Print("Reading state... ")
+	if !destroyJSON {
+		fmt.Print("Reading state... ")
+	}
 	currentState, err := stateMgr.Read(ctx)
 	if err != nil {
-		fmt.Println("FAILED")
+		if !destroyJSON {
+			fmt.Println("FAILED")
+		}
 		return fmt.Errorf("failed to read state: %w", err)
 	}
-	fmt.Println("OK")
+	if !destroyJSON {
+		fmt.Println("OK")
+	}
 
 	if len(currentState.Resources) == 0 {
-		fmt.Println("No resources to destroy. State is empty.")
+		if !destroyJSON {
+			fmt.Println("No resources to destroy. State is empty.")
+		}
 		return nil
 	}
 
-	// 3. Load providers for all resources in state
+	// Load providers for all resources in state
 	if err := loadStateProviders(registry, currentState); err != nil {
 		return err
 	}
@@ -92,26 +103,36 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 		Outputs:   map[string]any{},
 	}
 
-	fmt.Print("Calculating destroy plan... ")
-	plan, err := eng.CreatePlan(ctx, emptyCfg, currentState)
+	if !destroyJSON {
+		fmt.Print("Calculating destroy plan... ")
+	}
+	plan, err := eng.CreatePlanWithTargets(ctx, emptyCfg, currentState, targets)
 	if err != nil {
-		fmt.Println("FAILED")
+		if !destroyJSON {
+			fmt.Println("FAILED")
+		}
 		return fmt.Errorf("destroy plan failed: %w", err)
 	}
-	fmt.Println("OK")
+	if !destroyJSON {
+		fmt.Println("OK")
+	}
 
 	if len(plan.Changes) == 0 {
-		fmt.Println("No resources to destroy.")
+		if !destroyJSON {
+			fmt.Println("No resources to destroy.")
+		}
 		return nil
 	}
 
 	// 5. Show what will be destroyed
-	fmt.Printf("\nPicklr will destroy the following %d resource(s):\n", len(plan.Changes))
-	renderPlanChanges(plan)
-	renderPlanSummary(plan)
+	if !destroyJSON {
+		fmt.Printf("\nPicklr will destroy the following %d resource(s):\n", len(plan.Changes))
+		renderPlanChanges(plan)
+		renderPlanSummary(plan)
+	}
 
 	// 6. Confirm
-	if !destroyAutoApprove {
+	if !destroyAutoApprove && !destroyJSON {
 		fmt.Print("\nDo you really want to destroy all resources? (y/n): ")
 		var response string
 		fmt.Scanln(&response)
@@ -122,17 +143,37 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 	}
 
 	// 7. Execute
-	fmt.Printf("\nDestroying %d resources...\n", len(plan.Changes))
-	newState, err := eng.ApplyPlan(ctx, plan, currentState)
+	if !destroyJSON {
+		fmt.Printf("\nDestroying %d resources...\n", len(plan.Changes))
+	}
+
+	callback := func(event engine.ApplyEvent) {
+		if destroyJSON {
+			return
+		}
+		switch event.Status {
+		case "started":
+			fmt.Printf("%s%s: Destroying...%s\n", colorize("\033[31m"), event.Address, colorize("\033[0m"))
+		case "completed":
+			fmt.Printf("%s%s: Destruction complete after %s%s\n", colorize("\033[31m"), event.Address, event.Duration.Round(time.Millisecond), colorize("\033[0m"))
+		case "failed":
+			fmt.Printf("%s%s: FAILED (%v)%s\n", colorize("\033[31m"), event.Address, event.Error, colorize("\033[0m"))
+		}
+	}
+
+	newState, err := eng.ApplyPlanWithCallback(ctx, plan, currentState, callback)
 	if err != nil {
-		// Write partial state on failure
 		_ = stateMgr.Write(ctx, currentState)
 		return fmt.Errorf("destroy failed: %w", err)
 	}
 
-	// 8. Write empty state
+	// 8. Write state
 	if err := stateMgr.Write(ctx, newState); err != nil {
 		return fmt.Errorf("failed to write state: %w", err)
+	}
+
+	if destroyJSON {
+		return renderApplyResultJSON(plan, newState, cliOutput())
 	}
 
 	fmt.Printf("\nDestroy complete! %d resources destroyed.\n", plan.Summary.Delete)

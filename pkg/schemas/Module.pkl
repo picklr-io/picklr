@@ -1,0 +1,53 @@
+/// Base class for Picklr modules.
+///
+/// Modules are reusable infrastructure patterns that encapsulate
+/// a set of resources, inputs, and outputs.
+///
+/// Example usage:
+/// ```pkl
+/// amends "picklr:Module"
+///
+/// moduleName = "vpc"
+/// moduleVersion = "1.0.0"
+///
+/// input {
+///   cidr = "10.0.0.0/16"
+///   azCount = 3
+///   enableNatGateway = true
+/// }
+///
+/// resources {
+///   // Define resources here using input values
+/// }
+///
+/// output {
+///   ["vpc_id"] = "ptr://aws:EC2.Vpc/main/id"
+///   ["subnet_ids"] = "..."
+/// }
+/// ```
+module picklr.Module
+
+import "Resource.pkl"
+
+/// The name of this module.
+moduleName: String
+
+/// The version of this module.
+moduleVersion: String = "0.0.0"
+
+/// Module description.
+description: String = ""
+
+/// Input parameters for this module.
+/// Consumers provide values for these when using the module.
+input: Mapping<String, Any> = new {}
+
+/// Resources managed by this module.
+resources: Listing<Resource.Resource> = new {}
+
+/// Output values exported by this module.
+/// These can be referenced by other modules or the root config.
+output: Mapping<String, Any> = new {}
+
+/// Dependencies on other modules.
+dependsOn: Listing<String> = new {}

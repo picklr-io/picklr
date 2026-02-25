@@ -36,7 +36,7 @@ func runOutput(cmd *cobra.Command, args []string) error {
 	}
 
 	evaluator := eval.NewEvaluator(wd)
-	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
+	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 
 	s, err := stateMgr.Read(cmd.Context())
 	if err != nil {

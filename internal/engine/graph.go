@@ -190,12 +190,36 @@ func ResourceAddrPublic(res *ir.Resource) string {
 	return resourceAddr(res)
 }
 
-// Dependencies returns the list of dependencies for a given address.
+// Dependencies returns the list of direct dependencies for a given address.
 func (d *DAG) Dependencies(addr string) []string {
 	if node, ok := d.nodes[addr]; ok {
 		return node.edges
 	}
 	return nil
+}
+
+// TransitiveDeps returns all transitive dependencies of a given address.
+func (d *DAG) TransitiveDeps(addr string) []string {
+	visited := make(map[string]bool)
+	d.collectDeps(addr, visited)
+	delete(visited, addr) // Don't include self
+	result := make([]string, 0, len(visited))
+	for dep := range visited {
+		result = append(result, dep)
+	}
+	return result
+}
+
+func (d *DAG) collectDeps(addr string, visited map[string]bool) {
+	if visited[addr] {
+		return
+	}
+	visited[addr] = true
+	if node, ok := d.nodes[addr]; ok {
+		for _, dep := range node.edges {
+			d.collectDeps(dep, visited)
+		}
+	}
 }
 
 // resourceAddr returns the address of a resource (type.name).

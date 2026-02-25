@@ -25,6 +25,7 @@ func NewManager(path string, evaluator *eval.Evaluator) *Manager {
 }
 
 // Read loads the state from the configured path.
+// If the state file is encrypted, it is transparently decrypted before loading.
 func (m *Manager) Read(ctx context.Context) (*ir.State, error) {
 	// If state file doesn't exist, return empty state
 	if _, err := os.Stat(m.path); os.IsNotExist(err) {
@@ -32,6 +33,31 @@ func (m *Manager) Read(ctx context.Context) (*ir.State, error) {
 			Version: 1,
 			Serial:  0,
 		}, nil
+	}
+
+	// Check if file is encrypted and decrypt if needed
+	raw, err := os.ReadFile(m.path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read state file %s: %w", m.path, err)
+	}
+
+	if IsEncrypted(raw) {
+		decrypted, err := DecryptState(raw)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decrypt state: %w", err)
+		}
+		// Write decrypted content to a temp file for the PKL evaluator
+		tmpFile := m.path + ".dec"
+		if err := os.WriteFile(tmpFile, decrypted, 0600); err != nil {
+			return nil, fmt.Errorf("failed to write decrypted state: %w", err)
+		}
+		defer os.Remove(tmpFile)
+
+		state, err := m.evaluator.LoadState(ctx, tmpFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load decrypted state: %w", err)
+		}
+		return state, nil
 	}
 
 	state, err := m.evaluator.LoadState(ctx, m.path)
@@ -43,71 +69,80 @@ func (m *Manager) Read(ctx context.Context) (*ir.State, error) {
 }
 
 // Write saves the state to the configured path.
+// If PICKLR_STATE_ENCRYPTION_KEY is set, the file is transparently encrypted.
 func (m *Manager) Write(ctx context.Context, state *ir.State) error {
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(m.path), 0755); err != nil {
 		return fmt.Errorf("failed to create state directory: %w", err)
 	}
 
-	f, err := os.Create(m.path)
-	if err != nil {
-		return fmt.Errorf("failed to create state file %s: %w", m.path, err)
-	}
-	defer f.Close()
+	var b strings.Builder
 
 	// Write header
-	fmt.Fprintf(f, "// Picklr state file\n")
-	fmt.Fprintf(f, "amends \"../../pkg/schemas/State.pkl\"\n\n")
-	fmt.Fprintf(f, "version = %d\n", state.Version)
-	fmt.Fprintf(f, "serial = %d\n", state.Serial+1)
-	fmt.Fprintf(f, "lineage = %q\n\n", state.Lineage)
+	fmt.Fprintf(&b, "// Picklr state file\n")
+	fmt.Fprintf(&b, "amends \"../../pkg/schemas/State.pkl\"\n\n")
+	fmt.Fprintf(&b, "version = %d\n", state.Version)
+	fmt.Fprintf(&b, "serial = %d\n", state.Serial+1)
+	fmt.Fprintf(&b, "lineage = %q\n\n", state.Lineage)
 
 	// Write outputs
 	if len(state.Outputs) > 0 {
-		fmt.Fprintf(f, "outputs {\n")
+		fmt.Fprintf(&b, "outputs {\n")
 		for k, v := range state.Outputs {
-			fmt.Fprintf(f, "  [%q] = %s\n", k, serializePklValue(v, 1))
+			fmt.Fprintf(&b, "  [%q] = %s\n", k, serializePklValue(v, 1))
 		}
-		fmt.Fprintf(f, "}\n\n")
+		fmt.Fprintf(&b, "}\n\n")
 	} else {
-		fmt.Fprintf(f, "outputs = new {}\n\n")
+		fmt.Fprintf(&b, "outputs = new {}\n\n")
 	}
 
 	// Write resources
-	fmt.Fprintf(f, "resources {\n")
+	fmt.Fprintf(&b, "resources {\n")
 	for _, res := range state.Resources {
-		fmt.Fprintf(f, "  new {\n")
-		fmt.Fprintf(f, "    type = %q\n", res.Type)
-		fmt.Fprintf(f, "    name = %q\n", res.Name)
-		fmt.Fprintf(f, "    provider = %q\n", res.Provider)
+		fmt.Fprintf(&b, "  new {\n")
+		fmt.Fprintf(&b, "    type = %q\n", res.Type)
+		fmt.Fprintf(&b, "    name = %q\n", res.Name)
+		fmt.Fprintf(&b, "    provider = %q\n", res.Provider)
 
 		// Serialize inputs
 		if len(res.Inputs) > 0 {
-			fmt.Fprintf(f, "    inputs {\n")
+			fmt.Fprintf(&b, "    inputs {\n")
 			for k, v := range res.Inputs {
-				fmt.Fprintf(f, "      [%q] = %s\n", k, serializePklValue(v, 3))
+				fmt.Fprintf(&b, "      [%q] = %s\n", k, serializePklValue(v, 3))
 			}
-			fmt.Fprintf(f, "    }\n")
+			fmt.Fprintf(&b, "    }\n")
 		} else {
-			fmt.Fprintf(f, "    inputs = new {}\n")
+			fmt.Fprintf(&b, "    inputs = new {}\n")
 		}
 
-		fmt.Fprintf(f, "    inputsHash = %q\n", res.InputsHash)
+		fmt.Fprintf(&b, "    inputsHash = %q\n", res.InputsHash)
 
 		// Serialize outputs
 		if len(res.Outputs) > 0 {
-			fmt.Fprintf(f, "    outputs {\n")
+			fmt.Fprintf(&b, "    outputs {\n")
 			for k, v := range res.Outputs {
-				fmt.Fprintf(f, "      [%q] = %s\n", k, serializePklValue(v, 3))
+				fmt.Fprintf(&b, "      [%q] = %s\n", k, serializePklValue(v, 3))
 			}
-			fmt.Fprintf(f, "    }\n")
+			fmt.Fprintf(&b, "    }\n")
 		} else {
-			fmt.Fprintf(f, "    outputs = new {}\n")
+			fmt.Fprintf(&b, "    outputs = new {}\n")
 		}
 
-		fmt.Fprintf(f, "  }\n")
+		fmt.Fprintf(&b, "  }\n")
 	}
-	fmt.Fprintf(f, "}\n")
+	fmt.Fprintf(&b, "}\n")
+
+	content := []byte(b.String())
+
+	// Encrypt if encryption key is configured
+	encrypted, err := EncryptState(content)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt state: %w", err)
+	}
+
+	if err := os.WriteFile(m.path, encrypted, 0644); err != nil {
+		return fmt.Errorf("failed to write state file %s: %w", m.path, err)
+	}
 
 	return nil
 }

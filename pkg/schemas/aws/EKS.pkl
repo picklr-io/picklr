@@ -1,0 +1,233 @@
+module picklr.aws.EKS
+
+import "../Resource.pkl"
+
+/// An EKS Cluster.
+class Cluster extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the cluster.
+  clusterName: String
+
+  /// The ARN of the IAM role that provides permissions for the Kubernetes control plane.
+  roleArn: String
+
+  /// The Kubernetes server version.
+  version: String?
+
+  /// VPC configuration for the cluster.
+  vpcConfig: VpcConfig
+
+  /// Enable or disable EKS public API server endpoint.
+  endpointPublicAccess: Boolean = true
+
+  /// Enable or disable EKS private API server endpoint.
+  endpointPrivateAccess: Boolean = false
+
+  /// The encryption configuration for the cluster.
+  encryptionConfig: EncryptionConfig?
+
+  /// The Kubernetes network configuration for the cluster.
+  kubernetesNetworkConfig: KubernetesNetworkConfig?
+
+  /// Tags for the cluster.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["cluster_name"] = clusterName
+    ["role_arn"] = roleArn
+    ["version"] = version
+    ["vpc_config"] = new Mapping {
+      ["subnet_ids"] = vpcConfig.subnetIds
+      ["security_group_ids"] = vpcConfig.securityGroupIds
+      ["endpoint_public_access"] = endpointPublicAccess
+      ["endpoint_private_access"] = endpointPrivateAccess
+    }
+    ["encryption_config"] =
+      if (encryptionConfig != null)
+        new Mapping {
+          ["key_arn"] = encryptionConfig.keyArn
+          ["resources"] = encryptionConfig.resources
+        }
+      else
+        null
+    ["kubernetes_network_config"] =
+      if (kubernetesNetworkConfig != null)
+        new Mapping {
+          ["service_ipv4_cidr"] = kubernetesNetworkConfig.serviceIpv4Cidr
+          ["ip_family"] = kubernetesNetworkConfig.ipFamily
+        }
+      else
+        null
+    ["tags"] = tags
+  }
+}
+
+class VpcConfig {
+  /// List of subnet IDs for the cluster.
+  subnetIds: Listing<String>
+
+  /// List of security group IDs for the cluster.
+  securityGroupIds: Listing<String>?
+}
+
+class EncryptionConfig {
+  /// ARN of the KMS key used for encryption.
+  keyArn: String
+
+  /// List of strings with resources to be encrypted (e.g., "secrets").
+  resources: Listing<String>
+}
+
+class KubernetesNetworkConfig {
+  /// The CIDR block to assign Kubernetes service IP addresses from.
+  serviceIpv4Cidr: String?
+
+  /// The IP family used to assign Kubernetes pod and service addresses.
+  ipFamily: String = "ipv4"
+}
+
+/// An EKS Managed Node Group.
+class NodeGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the node group.
+  nodeGroupName: String
+
+  /// The name of the EKS cluster.
+  clusterName: String
+
+  /// The ARN of the IAM role for the node group.
+  nodeRoleArn: String
+
+  /// The subnets to use for the node group.
+  subnetIds: Listing<String>
+
+  /// The scaling configuration for the node group.
+  scalingConfig: ScalingConfig
+
+  /// The instance types to use for the node group.
+  instanceTypes: Listing<String>?
+
+  /// The AMI type for the node group.
+  amiType: String?
+
+  /// The capacity type (ON_DEMAND or SPOT).
+  capacityType: String = "ON_DEMAND"
+
+  /// The disk size in GiB for the node group instances.
+  diskSize: Int?
+
+  /// The Kubernetes labels to apply to the nodes.
+  labels: Mapping<String, String>?
+
+  /// Tags for the node group.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["node_group_name"] = nodeGroupName
+    ["cluster_name"] = clusterName
+    ["node_role_arn"] = nodeRoleArn
+    ["subnet_ids"] = subnetIds
+    ["scaling_config"] = new Mapping {
+      ["desired_size"] = scalingConfig.desiredSize
+      ["max_size"] = scalingConfig.maxSize
+      ["min_size"] = scalingConfig.minSize
+    }
+    ["instance_types"] = instanceTypes
+    ["ami_type"] = amiType
+    ["capacity_type"] = capacityType
+    ["disk_size"] = diskSize
+    ["labels"] = labels
+    ["tags"] = tags
+  }
+}
+
+class ScalingConfig {
+  /// The desired number of nodes.
+  desiredSize: Int
+
+  /// The maximum number of nodes.
+  maxSize: Int
+
+  /// The minimum number of nodes.
+  minSize: Int
+}
+
+/// An EKS Fargate Profile.
+class FargateProfile extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the Fargate profile.
+  fargateProfileName: String
+
+  /// The name of the EKS cluster.
+  clusterName: String
+
+  /// The ARN of the IAM role for the Fargate profile.
+  podExecutionRoleArn: String
+
+  /// The subnets for the Fargate profile.
+  subnetIds: Listing<String>
+
+  /// Selectors to match pods to this Fargate profile.
+  selectors: Listing<FargateSelector>
+
+  /// Tags for the Fargate profile.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["fargate_profile_name"] = fargateProfileName
+    ["cluster_name"] = clusterName
+    ["pod_execution_role_arn"] = podExecutionRoleArn
+    ["subnet_ids"] = subnetIds
+    ["selectors"] =
+      selectors
+        .toList()
+        .map((s) -> new Mapping {
+          ["namespace"] = s.namespace
+          ["labels"] = s.labels
+        })
+    ["tags"] = tags
+  }
+}
+
+class FargateSelector {
+  /// The Kubernetes namespace to match.
+  namespace: String
+
+  /// The Kubernetes labels to match.
+  labels: Mapping<String, String>?
+}
+
+/// An EKS Addon.
+class Addon extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the addon.
+  addonName: String
+
+  /// The name of the EKS cluster.
+  clusterName: String
+
+  /// The version of the addon.
+  addonVersion: String?
+
+  /// The ARN of the IAM role for the addon service account.
+  serviceAccountRoleArn: String?
+
+  /// How to resolve field value conflicts (OVERWRITE or NONE).
+  resolveConflicts: String = "OVERWRITE"
+
+  /// Tags for the addon.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["addon_name"] = addonName
+    ["cluster_name"] = clusterName
+    ["addon_version"] = addonVersion
+    ["service_account_role_arn"] = serviceAccountRoleArn
+    ["resolve_conflicts"] = resolveConflicts
+    ["tags"] = tags
+  }
+}

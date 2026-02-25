@@ -27,6 +27,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sfn"
 	"github.com/aws/aws-sdk-go-v2/service/xray"
 
+	"github.com/aws/aws-sdk-go-v2/service/apigatewayv2"
+	"github.com/aws/aws-sdk-go-v2/service/cloudtrail"
+	"github.com/aws/aws-sdk-go-v2/service/cognitoidentity"
+	"github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider"
+	"github.com/aws/aws-sdk-go-v2/service/eks"
+	"github.com/aws/aws-sdk-go-v2/service/elasticache"
+	"github.com/aws/aws-sdk-go-v2/service/sesv2"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/wafv2"
+
 	"github.com/aws/aws-sdk-go-v2/service/cloudfront"
 
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatch"
@@ -89,6 +99,16 @@ type Provider struct {
 	codecommitClient     *codecommit.Client
 	codedeployClient     *codedeploy.Client
 	codepipelineClient   *codepipeline.Client
+
+	eksClient               *eks.Client
+	elasticacheClient       *elasticache.Client
+	apigatewayv2Client      *apigatewayv2.Client
+	cognitoIdpClient        *cognitoidentityprovider.Client
+	cognitoIdentityClient   *cognitoidentity.Client
+	ssmClient               *ssm.Client
+	wafv2Client             *wafv2.Client
+	sesv2Client             *sesv2.Client
+	cloudtrailClient        *cloudtrail.Client
 }
 
 func New() *Provider {
@@ -142,6 +162,16 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.codecommitClient = codecommit.NewFromConfig(cfg)
 	p.codedeployClient = codedeploy.NewFromConfig(cfg)
 	p.codepipelineClient = codepipeline.NewFromConfig(cfg)
+
+	p.eksClient = eks.NewFromConfig(cfg)
+	p.elasticacheClient = elasticache.NewFromConfig(cfg)
+	p.apigatewayv2Client = apigatewayv2.NewFromConfig(cfg)
+	p.cognitoIdpClient = cognitoidentityprovider.NewFromConfig(cfg)
+	p.cognitoIdentityClient = cognitoidentity.NewFromConfig(cfg)
+	p.ssmClient = ssm.NewFromConfig(cfg)
+	p.wafv2Client = wafv2.NewFromConfig(cfg)
+	p.sesv2Client = sesv2.NewFromConfig(cfg)
+	p.cloudtrailClient = cloudtrail.NewFromConfig(cfg)
 
 	return nil
 }
@@ -416,6 +446,76 @@ func (p *Provider) Apply(ctx context.Context, req *pb.ApplyRequest) (*pb.ApplyRe
 		return p.applyRedshiftSubnetGroup(ctx, req)
 	case "aws:OpenSearch.Domain":
 		return p.applyOpenSearchDomain(ctx, req)
+
+	// EKS
+	case "aws:EKS.Cluster":
+		return p.applyEKSCluster(ctx, req)
+	case "aws:EKS.NodeGroup":
+		return p.applyEKSNodeGroup(ctx, req)
+	case "aws:EKS.FargateProfile":
+		return p.applyEKSFargateProfile(ctx, req)
+	case "aws:EKS.Addon":
+		return p.applyEKSAddon(ctx, req)
+
+	// ElastiCache
+	case "aws:ElastiCache.ReplicationGroup":
+		return p.applyReplicationGroup(ctx, req)
+	case "aws:ElastiCache.CacheCluster":
+		return p.applyCacheCluster(ctx, req)
+	case "aws:ElastiCache.SubnetGroup":
+		return p.applyCacheSubnetGroup(ctx, req)
+	case "aws:ElastiCache.ParameterGroup":
+		return p.applyCacheParameterGroup(ctx, req)
+
+	// API Gateway V2
+	case "aws:APIGatewayV2.Api":
+		return p.applyApiV2(ctx, req)
+	case "aws:APIGatewayV2.Stage":
+		return p.applyStageV2(ctx, req)
+	case "aws:APIGatewayV2.Route":
+		return p.applyRouteV2(ctx, req)
+	case "aws:APIGatewayV2.Integration":
+		return p.applyIntegrationV2(ctx, req)
+	case "aws:APIGatewayV2.DomainName":
+		return p.applyDomainNameV2(ctx, req)
+
+	// Cognito
+	case "aws:Cognito.UserPool":
+		return p.applyUserPool(ctx, req)
+	case "aws:Cognito.UserPoolClient":
+		return p.applyUserPoolClient(ctx, req)
+	case "aws:Cognito.IdentityPool":
+		return p.applyIdentityPool(ctx, req)
+
+	// SSM
+	case "aws:SSM.Parameter":
+		return p.applySSMParameter(ctx, req)
+
+	// WAFv2
+	case "aws:WAFv2.WebACL":
+		return p.applyWebACL(ctx, req)
+	case "aws:WAFv2.IPSet":
+		return p.applyIPSet(ctx, req)
+	case "aws:WAFv2.RuleGroup":
+		return p.applyWAFRuleGroup(ctx, req)
+
+	// SES
+	case "aws:SES.EmailIdentity":
+		return p.applyEmailIdentity(ctx, req)
+	case "aws:SES.ConfigurationSet":
+		return p.applyConfigurationSet(ctx, req)
+
+	// CloudTrail
+	case "aws:CloudTrail.Trail":
+		return p.applyTrail(ctx, req)
+
+	// VPN (uses EC2 client)
+	case "aws:VPN.VpnGateway":
+		return p.applyVpnGateway(ctx, req)
+	case "aws:VPN.CustomerGateway":
+		return p.applyCustomerGateway(ctx, req)
+	case "aws:VPN.VpnConnection":
+		return p.applyVpnConnection(ctx, req)
 	}
 
 	return nil, fmt.Errorf("unknown resource type: %s", req.Type)

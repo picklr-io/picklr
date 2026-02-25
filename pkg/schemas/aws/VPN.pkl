@@ -1,0 +1,107 @@
+module picklr.aws.VPN
+
+import "../Resource.pkl"
+
+/// A VPN Gateway.
+class VpnGateway extends Resource.Resource {
+  provider = "aws"
+
+  /// The VPC ID to attach the VPN gateway to.
+  vpcId: String?
+
+  /// The Availability Zone for the virtual private gateway.
+  availabilityZone: String?
+
+  /// The type of VPN connection (ipsec.1).
+  vpnType: String = "ipsec.1"
+
+  /// The private Autonomous System Number (ASN) for the Amazon side of the gateway.
+  amazonSideAsn: Int?
+
+  /// Tags for the VPN gateway.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["vpc_id"] = vpcId
+    ["availability_zone"] = availabilityZone
+    ["vpn_type"] = vpnType
+    ["amazon_side_asn"] = amazonSideAsn
+    ["tags"] = tags
+  }
+}
+
+/// A Customer Gateway.
+class CustomerGateway extends Resource.Resource {
+  provider = "aws"
+
+  /// The BGP ASN for the customer gateway.
+  bgpAsn: Int
+
+  /// The IP address for the customer gateway.
+  ipAddress: String
+
+  /// The type of VPN connection (ipsec.1).
+  vpnType: String = "ipsec.1"
+
+  /// The name of the customer gateway device.
+  deviceName: String?
+
+  /// The ARN of the certificate for the customer gateway.
+  certificateArn: String?
+
+  /// Tags for the customer gateway.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["bgp_asn"] = bgpAsn
+    ["ip_address"] = ipAddress
+    ["vpn_type"] = vpnType
+    ["device_name"] = deviceName
+    ["certificate_arn"] = certificateArn
+    ["tags"] = tags
+  }
+}
+
+/// A VPN Connection.
+class VpnConnection extends Resource.Resource {
+  provider = "aws"
+
+  /// The ID of the customer gateway.
+  customerGatewayId: String
+
+  /// The type of VPN connection (ipsec.1).
+  vpnType: String = "ipsec.1"
+
+  /// The ID of the VPN gateway.
+  vpnGatewayId: String?
+
+  /// The ID of the transit gateway.
+  transitGatewayId: String?
+
+  /// Whether to enable acceleration for the VPN connection.
+  enableAcceleration: Boolean = false
+
+  /// Whether the VPN connection uses static routes only.
+  staticRoutesOnly: Boolean = false
+
+  /// The IPv4 CIDR on the customer gateway side of the VPN connection.
+  localIpv4NetworkCidr: String?
+
+  /// The IPv4 CIDR on the AWS side of the VPN connection.
+  remoteIpv4NetworkCidr: String?
+
+  /// Tags for the VPN connection.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["customer_gateway_id"] = customerGatewayId
+    ["vpn_type"] = vpnType
+    ["vpn_gateway_id"] = vpnGatewayId
+    ["transit_gateway_id"] = transitGatewayId
+    ["enable_acceleration"] = enableAcceleration
+    ["static_routes_only"] = staticRoutesOnly
+    ["local_ipv4_network_cidr"] = localIpv4NetworkCidr
+    ["remote_ipv4_network_cidr"] = remoteIpv4NetworkCidr
+    ["tags"] = tags
+  }
+}

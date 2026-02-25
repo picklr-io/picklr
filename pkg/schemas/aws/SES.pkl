@@ -1,0 +1,70 @@
+module picklr.aws.SES
+
+import "../Resource.pkl"
+
+/// An SES Email Identity (domain or email address).
+class EmailIdentity extends Resource.Resource {
+  provider = "aws"
+
+  /// The email identity (email address or domain).
+  emailIdentity: String
+
+  /// The DKIM signing configuration.
+  dkimSigningAttributes: DkimSigningAttributes?
+
+  /// Tags for the email identity.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["email_identity"] = emailIdentity
+    ["dkim_signing_attributes"] =
+      if (dkimSigningAttributes != null)
+        new Mapping {
+          ["domain_signing_selector"] = dkimSigningAttributes.domainSigningSelector
+          ["domain_signing_private_key"] = dkimSigningAttributes.domainSigningPrivateKey
+          ["next_signing_key_length"] = dkimSigningAttributes.nextSigningKeyLength
+        }
+      else
+        null
+    ["tags"] = tags
+  }
+}
+
+class DkimSigningAttributes {
+  /// The key selector for the DKIM signature.
+  domainSigningSelector: String?
+
+  /// The private key for the DKIM signature.
+  domainSigningPrivateKey: String?
+
+  /// The key length for Easy DKIM (RSA_1024_BIT or RSA_2048_BIT).
+  nextSigningKeyLength: String?
+}
+
+/// An SES Configuration Set.
+class ConfigurationSet extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the configuration set.
+  configurationSetName: String
+
+  /// The sending options for the configuration set.
+  sendingEnabled: Boolean = true
+
+  /// The reputation options.
+  reputationMetricsEnabled: Boolean = false
+
+  /// The delivery options.
+  tlsPolicy: String = "REQUIRE"
+
+  /// Tags for the configuration set.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["configuration_set_name"] = configurationSetName
+    ["sending_enabled"] = sendingEnabled
+    ["reputation_metrics_enabled"] = reputationMetricsEnabled
+    ["tls_policy"] = tlsPolicy
+    ["tags"] = tags
+  }
+}

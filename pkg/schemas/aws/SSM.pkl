@@ -1,0 +1,43 @@
+module picklr.aws.SSM
+
+import "../Resource.pkl"
+
+/// An SSM Parameter Store parameter.
+class Parameter extends Resource.Resource {
+  provider = "aws"
+
+  /// The fully qualified name of the parameter.
+  parameterName: String
+
+  /// The type of the parameter (String, StringList, SecureString).
+  parameterType: String = "String"
+
+  /// The value of the parameter.
+  value: String
+
+  /// A description of the parameter.
+  description: String?
+
+  /// The tier of the parameter (Standard, Advanced, Intelligent-Tiering).
+  tier: String = "Standard"
+
+  /// The KMS key ID to use for encryption (for SecureString type).
+  keyId: String?
+
+  /// The data type of the parameter (text or aws:ec2:image).
+  dataType: String = "text"
+
+  /// Tags for the parameter.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["parameter_name"] = parameterName
+    ["parameter_type"] = parameterType
+    ["value"] = value
+    ["description"] = description
+    ["tier"] = tier
+    ["key_id"] = keyId
+    ["data_type"] = dataType
+    ["tags"] = tags
+  }
+}

@@ -1,0 +1,196 @@
+module picklr.aws.ElastiCache
+
+import "../Resource.pkl"
+
+/// An ElastiCache Replication Group (Redis).
+class ReplicationGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The replication group identifier.
+  replicationGroupId: String
+
+  /// A user-created description for the replication group.
+  replicationGroupDescription: String
+
+  /// The compute and memory capacity of the nodes.
+  nodeType: String
+
+  /// The number of cache clusters (nodes) in this replication group.
+  numCacheClusters: Int = 1
+
+  /// The port number on which each cache node accepts connections.
+  port: Int = 6379
+
+  /// The name of the parameter group to associate with this replication group.
+  parameterGroupName: String?
+
+  /// The name of the subnet group to use for the replication group.
+  subnetGroupName: String?
+
+  /// List of VPC security group IDs.
+  securityGroupIds: Listing<String>?
+
+  /// Whether to enable automatic failover.
+  automaticFailoverEnabled: Boolean = false
+
+  /// Whether to enable Multi-AZ support.
+  multiAzEnabled: Boolean = false
+
+  /// Whether to enable at-rest encryption.
+  atRestEncryptionEnabled: Boolean = false
+
+  /// Whether to enable in-transit encryption.
+  transitEncryptionEnabled: Boolean = false
+
+  /// The Redis engine version.
+  engineVersion: String?
+
+  /// The number of days for which ElastiCache retains automatic snapshots.
+  snapshotRetentionLimit: Int?
+
+  /// The daily time range during which automated backups are created.
+  snapshotWindow: String?
+
+  /// Tags for the replication group.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["replication_group_id"] = replicationGroupId
+    ["replication_group_description"] = replicationGroupDescription
+    ["node_type"] = nodeType
+    ["num_cache_clusters"] = numCacheClusters
+    ["port"] = port
+    ["parameter_group_name"] = parameterGroupName
+    ["subnet_group_name"] = subnetGroupName
+    ["security_group_ids"] = securityGroupIds
+    ["automatic_failover_enabled"] = automaticFailoverEnabled
+    ["multi_az_enabled"] = multiAzEnabled
+    ["at_rest_encryption_enabled"] = atRestEncryptionEnabled
+    ["transit_encryption_enabled"] = transitEncryptionEnabled
+    ["engine_version"] = engineVersion
+    ["snapshot_retention_limit"] = snapshotRetentionLimit
+    ["snapshot_window"] = snapshotWindow
+    ["tags"] = tags
+  }
+}
+
+/// An ElastiCache Cluster (Memcached or standalone Redis node).
+class CacheCluster extends Resource.Resource {
+  provider = "aws"
+
+  /// The cluster identifier.
+  clusterId: String
+
+  /// The cache engine to use (redis or memcached).
+  engine: String = "redis"
+
+  /// The compute and memory capacity of the nodes.
+  nodeType: String
+
+  /// The initial number of cache nodes.
+  numCacheNodes: Int = 1
+
+  /// The port number on which each cache node accepts connections.
+  port: Int = 6379
+
+  /// The name of the parameter group to associate with this cluster.
+  parameterGroupName: String?
+
+  /// The name of the subnet group to use.
+  subnetGroupName: String?
+
+  /// List of VPC security group IDs.
+  securityGroupIds: Listing<String>?
+
+  /// The version number of the cache engine.
+  engineVersion: String?
+
+  /// The Availability Zone in which the cluster will be created.
+  availabilityZone: String?
+
+  /// Tags for the cluster.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["cluster_id"] = clusterId
+    ["engine"] = engine
+    ["node_type"] = nodeType
+    ["num_cache_nodes"] = numCacheNodes
+    ["port"] = port
+    ["parameter_group_name"] = parameterGroupName
+    ["subnet_group_name"] = subnetGroupName
+    ["security_group_ids"] = securityGroupIds
+    ["engine_version"] = engineVersion
+    ["availability_zone"] = availabilityZone
+    ["tags"] = tags
+  }
+}
+
+/// An ElastiCache Subnet Group.
+class SubnetGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the cache subnet group.
+  subnetGroupName: String
+
+  /// A description for the cache subnet group.
+  description: String?
+
+  /// List of VPC subnet IDs for the cache subnet group.
+  subnetIds: Listing<String>
+
+  /// Tags for the subnet group.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["subnet_group_name"] = subnetGroupName
+    ["description"] = description
+    ["subnet_ids"] = subnetIds
+    ["tags"] = tags
+  }
+}
+
+/// An ElastiCache Parameter Group.
+class ParameterGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the cache parameter group.
+  parameterGroupName: String
+
+  /// The name of the cache parameter group family.
+  family: String
+
+  /// A description for the cache parameter group.
+  description: String?
+
+  /// A list of parameter name/value pairs to apply.
+  parameters: Listing<Parameter>?
+
+  /// Tags for the parameter group.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["parameter_group_name"] = parameterGroupName
+    ["family"] = family
+    ["description"] = description
+    ["parameters"] =
+      if (parameters != null)
+        parameters
+          .toList()
+          .map((p) -> new Mapping {
+            ["name"] = p.name
+            ["value"] = p.value
+          })
+      else
+        null
+    ["tags"] = tags
+  }
+}
+
+class Parameter {
+  /// The name of the parameter.
+  name: String
+
+  /// The value of the parameter.
+  value: String
+}

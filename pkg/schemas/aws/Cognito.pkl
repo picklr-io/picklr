@@ -1,0 +1,223 @@
+module picklr.aws.Cognito
+
+import "../Resource.pkl"
+
+/// A Cognito User Pool.
+class UserPool extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the user pool.
+  poolName: String
+
+  /// The policies associated with the user pool.
+  passwordPolicy: PasswordPolicy?
+
+  /// Whether users can sign themselves up.
+  allowUserSelfSignUp: Boolean = true
+
+  /// The attributes required for user registration.
+  autoVerifiedAttributes: Listing<String>?
+
+  /// The user pool MFA configuration.
+  mfaConfiguration: String = "OFF"
+
+  /// The email configuration.
+  emailConfiguration: EmailConfiguration?
+
+  /// The schema attributes for the user pool.
+  schemaAttributes: Listing<SchemaAttribute>?
+
+  /// Tags for the user pool.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["pool_name"] = poolName
+    ["password_policy"] =
+      if (passwordPolicy != null)
+        new Mapping {
+          ["minimum_length"] = passwordPolicy.minimumLength
+          ["require_uppercase"] = passwordPolicy.requireUppercase
+          ["require_lowercase"] = passwordPolicy.requireLowercase
+          ["require_numbers"] = passwordPolicy.requireNumbers
+          ["require_symbols"] = passwordPolicy.requireSymbols
+          ["temporary_password_validity_days"] = passwordPolicy.temporaryPasswordValidityDays
+        }
+      else
+        null
+    ["allow_user_self_sign_up"] = allowUserSelfSignUp
+    ["auto_verified_attributes"] = autoVerifiedAttributes
+    ["mfa_configuration"] = mfaConfiguration
+    ["email_configuration"] =
+      if (emailConfiguration != null)
+        new Mapping {
+          ["email_sending_account"] = emailConfiguration.emailSendingAccount
+          ["source_arn"] = emailConfiguration.sourceArn
+          ["reply_to_email_address"] = emailConfiguration.replyToEmailAddress
+        }
+      else
+        null
+    ["schema_attributes"] =
+      if (schemaAttributes != null)
+        schemaAttributes
+          .toList()
+          .map((a) -> new Mapping {
+            ["name"] = a.name
+            ["attribute_data_type"] = a.attributeDataType
+            ["required"] = a.required
+            ["mutable"] = a.mutable
+          })
+      else
+        null
+    ["tags"] = tags
+  }
+}
+
+class PasswordPolicy {
+  /// The minimum length of the password.
+  minimumLength: Int = 8
+
+  /// Whether the policy requires uppercase characters.
+  requireUppercase: Boolean = true
+
+  /// Whether the policy requires lowercase characters.
+  requireLowercase: Boolean = true
+
+  /// Whether the policy requires numbers.
+  requireNumbers: Boolean = true
+
+  /// Whether the policy requires symbols.
+  requireSymbols: Boolean = true
+
+  /// The number of days a temporary password is valid.
+  temporaryPasswordValidityDays: Int = 7
+}
+
+class EmailConfiguration {
+  /// The email delivery method (COGNITO_DEFAULT or DEVELOPER).
+  emailSendingAccount: String = "COGNITO_DEFAULT"
+
+  /// The ARN of the SES verified email identity.
+  sourceArn: String?
+
+  /// The reply-to email address.
+  replyToEmailAddress: String?
+}
+
+class SchemaAttribute {
+  /// The name of the attribute.
+  name: String
+
+  /// The data type (String, Number, DateTime, Boolean).
+  attributeDataType: String = "String"
+
+  /// Whether the attribute is required.
+  required: Boolean = false
+
+  /// Whether the attribute can be changed after creation.
+  mutable: Boolean = true
+}
+
+/// A Cognito User Pool Client.
+class UserPoolClient extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the application client.
+  clientName: String
+
+  /// The user pool ID.
+  userPoolId: String
+
+  /// Whether to generate a client secret.
+  generateSecret: Boolean = false
+
+  /// The allowed OAuth flows (code, implicit, client_credentials).
+  allowedOauthFlows: Listing<String>?
+
+  /// The allowed OAuth scopes.
+  allowedOauthScopes: Listing<String>?
+
+  /// Whether the client is allowed to use OAuth flows.
+  allowedOauthFlowsUserPoolClient: Boolean = false
+
+  /// List of callback URLs.
+  callbackUrls: Listing<String>?
+
+  /// List of logout URLs.
+  logoutUrls: Listing<String>?
+
+  /// List of supported identity providers.
+  supportedIdentityProviders: Listing<String>?
+
+  /// The time limit for the access token (in hours).
+  accessTokenValidity: Int?
+
+  /// The time limit for the ID token (in hours).
+  idTokenValidity: Int?
+
+  /// The time limit for the refresh token (in days).
+  refreshTokenValidity: Int = 30
+
+  /// The authentication flows that are supported.
+  explicitAuthFlows: Listing<String>?
+
+  properties = new Mapping {
+    ["client_name"] = clientName
+    ["user_pool_id"] = userPoolId
+    ["generate_secret"] = generateSecret
+    ["allowed_oauth_flows"] = allowedOauthFlows
+    ["allowed_oauth_scopes"] = allowedOauthScopes
+    ["allowed_oauth_flows_user_pool_client"] = allowedOauthFlowsUserPoolClient
+    ["callback_urls"] = callbackUrls
+    ["logout_urls"] = logoutUrls
+    ["supported_identity_providers"] = supportedIdentityProviders
+    ["access_token_validity"] = accessTokenValidity
+    ["id_token_validity"] = idTokenValidity
+    ["refresh_token_validity"] = refreshTokenValidity
+    ["explicit_auth_flows"] = explicitAuthFlows
+  }
+}
+
+/// A Cognito Identity Pool.
+class IdentityPool extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the identity pool.
+  identityPoolName: String
+
+  /// Whether to allow unauthenticated identities.
+  allowUnauthenticatedIdentities: Boolean = false
+
+  /// The Cognito identity providers.
+  cognitoIdentityProviders: Listing<CognitoIdentityProvider>?
+
+  /// Tags for the identity pool.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["identity_pool_name"] = identityPoolName
+    ["allow_unauthenticated_identities"] = allowUnauthenticatedIdentities
+    ["cognito_identity_providers"] =
+      if (cognitoIdentityProviders != null)
+        cognitoIdentityProviders
+          .toList()
+          .map((p) -> new Mapping {
+            ["client_id"] = p.clientId
+            ["provider_name"] = p.providerName
+            ["server_side_token_check"] = p.serverSideTokenCheck
+          })
+      else
+        null
+    ["tags"] = tags
+  }
+}
+
+class CognitoIdentityProvider {
+  /// The client ID for the Amazon Cognito user pool.
+  clientId: String
+
+  /// The provider name for the Amazon Cognito user pool.
+  providerName: String
+
+  /// Whether server-side token validation is enabled.
+  serverSideTokenCheck: Boolean = false
+}

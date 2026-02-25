@@ -1,0 +1,239 @@
+module picklr.aws.APIGatewayV2
+
+import "../Resource.pkl"
+
+/// An API Gateway V2 API (HTTP or WebSocket).
+class Api extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the API.
+  apiName: String
+
+  /// The protocol type (HTTP or WEBSOCKET).
+  protocolType: String = "HTTP"
+
+  /// A description of the API.
+  description: String?
+
+  /// A CORS configuration for the API.
+  corsConfiguration: CorsConfiguration?
+
+  /// Whether clients can invoke your API by using the default execute-api endpoint.
+  disableExecuteApiEndpoint: Boolean = false
+
+  /// Tags for the API.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["api_name"] = apiName
+    ["protocol_type"] = protocolType
+    ["description"] = description
+    ["cors_configuration"] =
+      if (corsConfiguration != null)
+        new Mapping {
+          ["allow_origins"] = corsConfiguration.allowOrigins
+          ["allow_methods"] = corsConfiguration.allowMethods
+          ["allow_headers"] = corsConfiguration.allowHeaders
+          ["expose_headers"] = corsConfiguration.exposeHeaders
+          ["max_age"] = corsConfiguration.maxAge
+          ["allow_credentials"] = corsConfiguration.allowCredentials
+        }
+      else
+        null
+    ["disable_execute_api_endpoint"] = disableExecuteApiEndpoint
+    ["tags"] = tags
+  }
+}
+
+class CorsConfiguration {
+  /// The allowed origins.
+  allowOrigins: Listing<String>?
+
+  /// The allowed HTTP methods.
+  allowMethods: Listing<String>?
+
+  /// The allowed headers.
+  allowHeaders: Listing<String>?
+
+  /// The exposed headers.
+  exposeHeaders: Listing<String>?
+
+  /// The number of seconds that the browser should cache preflight request results.
+  maxAge: Int?
+
+  /// Whether credentials are included in the CORS request.
+  allowCredentials: Boolean = false
+}
+
+/// An API Gateway V2 Stage.
+class Stage extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the stage.
+  stageName: String
+
+  /// The API ID.
+  apiId: String
+
+  /// Whether updates to an API automatically trigger a new deployment.
+  autoDeploy: Boolean = false
+
+  /// A description of the stage.
+  description: String?
+
+  /// The default route settings for the stage.
+  defaultRouteSettings: RouteSettings?
+
+  /// Stage variables.
+  stageVariables: Mapping<String, String>?
+
+  /// Tags for the stage.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["stage_name"] = stageName
+    ["api_id"] = apiId
+    ["auto_deploy"] = autoDeploy
+    ["description"] = description
+    ["default_route_settings"] =
+      if (defaultRouteSettings != null)
+        new Mapping {
+          ["detailed_metrics_enabled"] = defaultRouteSettings.detailedMetricsEnabled
+          ["logging_level"] = defaultRouteSettings.loggingLevel
+          ["throttling_burst_limit"] = defaultRouteSettings.throttlingBurstLimit
+          ["throttling_rate_limit"] = defaultRouteSettings.throttlingRateLimit
+        }
+      else
+        null
+    ["stage_variables"] = stageVariables
+    ["tags"] = tags
+  }
+}
+
+class RouteSettings {
+  /// Whether detailed metrics are enabled.
+  detailedMetricsEnabled: Boolean = false
+
+  /// The logging level (OFF, ERROR, INFO).
+  loggingLevel: String?
+
+  /// The throttling burst limit.
+  throttlingBurstLimit: Int?
+
+  /// The throttling rate limit.
+  throttlingRateLimit: Float?
+}
+
+/// An API Gateway V2 Route.
+class Route extends Resource.Resource {
+  provider = "aws"
+
+  /// The API ID.
+  apiId: String
+
+  /// The route key (e.g., "GET /items", "$default").
+  routeKey: String
+
+  /// The target for the route (e.g., "integrations/{integrationId}").
+  target: String?
+
+  /// The authorization type (NONE, AWS_IAM, CUSTOM, JWT).
+  authorizationType: String = "NONE"
+
+  /// The identifier of the Authorizer resource.
+  authorizerId: String?
+
+  /// The operation name for the route.
+  operationName: String?
+
+  properties = new Mapping {
+    ["api_id"] = apiId
+    ["route_key"] = routeKey
+    ["target"] = target
+    ["authorization_type"] = authorizationType
+    ["authorizer_id"] = authorizerId
+    ["operation_name"] = operationName
+  }
+}
+
+/// An API Gateway V2 Integration.
+class Integration extends Resource.Resource {
+  provider = "aws"
+
+  /// The API ID.
+  apiId: String
+
+  /// The integration type (AWS_PROXY, HTTP_PROXY, MOCK, HTTP, AWS).
+  integrationType: String
+
+  /// The URI of the Lambda function for a Lambda proxy integration.
+  integrationUri: String?
+
+  /// The integration method (e.g., POST).
+  integrationMethod: String?
+
+  /// The passthrough behavior (WHEN_NO_MATCH, NEVER, WHEN_NO_TEMPLATES).
+  passthroughBehavior: String?
+
+  /// The connection type (INTERNET or VPC_LINK).
+  connectionType: String?
+
+  /// The ID of the VPC link for a private integration.
+  connectionId: String?
+
+  /// The payload format version (1.0 or 2.0).
+  payloadFormatVersion: String = "2.0"
+
+  /// The timeout in milliseconds.
+  timeoutInMillis: Int?
+
+  properties = new Mapping {
+    ["api_id"] = apiId
+    ["integration_type"] = integrationType
+    ["integration_uri"] = integrationUri
+    ["integration_method"] = integrationMethod
+    ["passthrough_behavior"] = passthroughBehavior
+    ["connection_type"] = connectionType
+    ["connection_id"] = connectionId
+    ["payload_format_version"] = payloadFormatVersion
+    ["timeout_in_millis"] = timeoutInMillis
+  }
+}
+
+/// An API Gateway V2 Domain Name.
+class DomainName extends Resource.Resource {
+  provider = "aws"
+
+  /// The domain name.
+  domainName: String
+
+  /// The domain name configurations.
+  domainNameConfigurations: Listing<DomainNameConfiguration>
+
+  /// Tags for the domain name.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["domain_name"] = domainName
+    ["domain_name_configurations"] =
+      domainNameConfigurations
+        .toList()
+        .map((c) -> new Mapping {
+          ["certificate_arn"] = c.certificateArn
+          ["endpoint_type"] = c.endpointType
+          ["security_policy"] = c.securityPolicy
+        })
+    ["tags"] = tags
+  }
+}
+
+class DomainNameConfiguration {
+  /// The ARN of the certificate.
+  certificateArn: String
+
+  /// The endpoint type (REGIONAL or EDGE).
+  endpointType: String = "REGIONAL"
+
+  /// The security policy (TLS_1_0 or TLS_1_2).
+  securityPolicy: String = "TLS_1_2"
+}

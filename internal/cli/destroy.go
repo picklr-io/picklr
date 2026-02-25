@@ -17,6 +17,7 @@ import (
 var (
 	destroyAutoApprove bool
 	destroyJSON        bool
+	destroyOnError     string
 )
 
 var destroyCmd = &cobra.Command{
@@ -32,6 +33,7 @@ tracked in the state file.`,
 func init() {
 	destroyCmd.Flags().BoolVar(&destroyAutoApprove, "auto-approve", false, "Skip interactive approval before destroying")
 	destroyCmd.Flags().BoolVar(&destroyJSON, "json", false, "Output in JSON format")
+	destroyCmd.Flags().StringVar(&destroyOnError, "on-error", "fail", "Error handling mode: 'fail' (stop on first error) or 'continue' (apply remaining resources)")
 }
 
 func runDestroy(cmd *cobra.Command, args []string) error {
@@ -63,6 +65,7 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 	registry := provider.NewRegistry()
 	eng := engine.NewEngine(registry)
+	eng.ContinueOnError = destroyOnError == "continue"
 
 	// 2. Lock state
 	if err := stateMgr.Lock(); err != nil {

@@ -76,6 +76,23 @@ func (m *Manager) Write(ctx context.Context, state *ir.State) error {
 		return fmt.Errorf("failed to create state directory: %w", err)
 	}
 
+	content := []byte(SerializeState(state))
+
+	// Encrypt if encryption key is configured
+	encrypted, err := EncryptState(content)
+	if err != nil {
+		return fmt.Errorf("failed to encrypt state: %w", err)
+	}
+
+	if err := os.WriteFile(m.path, encrypted, 0644); err != nil {
+		return fmt.Errorf("failed to write state file %s: %w", m.path, err)
+	}
+
+	return nil
+}
+
+// SerializeState converts a State to its PKL text representation.
+func SerializeState(state *ir.State) string {
 	var b strings.Builder
 
 	// Write header
@@ -132,19 +149,7 @@ func (m *Manager) Write(ctx context.Context, state *ir.State) error {
 	}
 	fmt.Fprintf(&b, "}\n")
 
-	content := []byte(b.String())
-
-	// Encrypt if encryption key is configured
-	encrypted, err := EncryptState(content)
-	if err != nil {
-		return fmt.Errorf("failed to encrypt state: %w", err)
-	}
-
-	if err := os.WriteFile(m.path, encrypted, 0644); err != nil {
-		return fmt.Errorf("failed to write state file %s: %w", m.path, err)
-	}
-
-	return nil
+	return b.String()
 }
 
 // serializePklValue recursively serializes a Go value to PKL syntax.

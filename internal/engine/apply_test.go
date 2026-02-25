@@ -175,6 +175,89 @@ func TestApplyPlan_ProgressCallback(t *testing.T) {
 	assert.Equal(t, "null_resource.test1", events[0].Address)
 }
 
+func TestApplyPlan_ContinueOnError(t *testing.T) {
+	reg := provider.NewRegistry()
+	require.NoError(t, reg.LoadProvider("null"))
+
+	eng := NewEngine(reg)
+	eng.ContinueOnError = true
+	ctx := context.Background()
+
+	// Create a plan with two independent resources: one valid, one with a bad provider
+	plan := &ir.Plan{
+		Changes: []*ir.ResourceChange{
+			{
+				Address: "null_resource.good",
+				Action:  "CREATE",
+				Desired: &ir.Resource{
+					Type:     "null_resource",
+					Name:     "good",
+					Provider: "null",
+					Properties: map[string]any{
+						"triggers": map[string]any{"a": "b"},
+					},
+				},
+			},
+			{
+				Address: "null_resource.bad",
+				Action:  "CREATE",
+				Desired: &ir.Resource{
+					Type:     "null_resource",
+					Name:     "bad",
+					Provider: "nonexistent",
+					Properties: map[string]any{
+						"triggers": map[string]any{"a": "b"},
+					},
+				},
+			},
+		},
+		Summary: &ir.PlanSummary{Create: 2},
+		Outputs: map[string]any{},
+	}
+
+	state := &ir.State{Version: 1}
+
+	newState, err := eng.ApplyPlanWithCallback(ctx, plan, state, nil)
+	// Should get an error about the bad resource
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed")
+	// The good resource should still have been applied
+	assert.GreaterOrEqual(t, len(newState.Resources), 1)
+}
+
+func TestApplyPlan_FailFastByDefault(t *testing.T) {
+	reg := provider.NewRegistry()
+	require.NoError(t, reg.LoadProvider("null"))
+
+	eng := NewEngine(reg)
+	// ContinueOnError is false by default
+	ctx := context.Background()
+
+	plan := &ir.Plan{
+		Changes: []*ir.ResourceChange{
+			{
+				Address: "null_resource.bad",
+				Action:  "CREATE",
+				Desired: &ir.Resource{
+					Type:     "null_resource",
+					Name:     "bad",
+					Provider: "nonexistent",
+					Properties: map[string]any{
+						"triggers": map[string]any{"a": "b"},
+					},
+				},
+			},
+		},
+		Summary: &ir.PlanSummary{Create: 1},
+		Outputs: map[string]any{},
+	}
+
+	state := &ir.State{Version: 1}
+
+	_, err := eng.ApplyPlan(ctx, plan, state)
+	require.Error(t, err)
+}
+
 func TestApplyPlan_ResolveReferences(t *testing.T) {
 	state := &ir.State{
 		Resources: []*ir.ResourceState{

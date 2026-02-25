@@ -2,7 +2,9 @@ package aws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"os"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/acm"
@@ -145,11 +147,26 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 }
 
 func (p *Provider) Configure(ctx context.Context, req *pb.ConfigureRequest) (*pb.ConfigureResponse, error) {
-	// For simplicity, we'll just initialize with default config for now,
-	// or maybe pick up region from the request if we decide to pass it in Configure logic later.
-	// Ideally, the ConfigureRequest should contain the provider configuration (region, etc).
-	// Here we just ensure we can load the default config.
-	if err := p.ensureClient(ctx, "us-east-1"); err != nil { // Default region or extract from config
+	region := "us-east-1"
+
+	// Extract region/profile from config JSON if provided
+	if len(req.ConfigJson) > 0 {
+		var provConfig struct {
+			Region  string `json:"region"`
+			Profile string `json:"profile"`
+		}
+		if err := json.Unmarshal(req.ConfigJson, &provConfig); err == nil {
+			if provConfig.Region != "" {
+				region = provConfig.Region
+			}
+			if provConfig.Profile != "" {
+				// Profile-based config loading is handled by AWS SDK env vars
+				os.Setenv("AWS_PROFILE", provConfig.Profile)
+			}
+		}
+	}
+
+	if err := p.ensureClient(ctx, region); err != nil {
 		return &pb.ConfigureResponse{
 			Diagnostics: []*pb.Diagnostic{
 				{

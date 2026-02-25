@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/picklr-io/picklr/internal/engine"
 	"github.com/picklr-io/picklr/internal/eval"
@@ -122,10 +123,47 @@ func runApply(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// 5. Apply Plan
+	// 5. Apply Plan with progress events
 	fmt.Printf("\nApplying %d changes...\n", len(plan.Changes))
 
-	newState, err := eng.ApplyPlan(ctx, plan, currentState)
+	callback := func(event engine.ApplyEvent) {
+		switch event.Status {
+		case "started":
+			actionVerb := "Creating"
+			color := "\033[32m"
+			switch event.Action {
+			case "UPDATE":
+				actionVerb = "Modifying"
+				color = "\033[33m"
+			case "REPLACE":
+				actionVerb = "Replacing"
+				color = "\033[33m"
+			case "DELETE":
+				actionVerb = "Destroying"
+				color = "\033[31m"
+			}
+			fmt.Printf("%s%s: %s...\033[0m\n", color, event.Address, actionVerb)
+		case "completed":
+			actionVerb := "Creation complete"
+			color := "\033[32m"
+			switch event.Action {
+			case "UPDATE":
+				actionVerb = "Modification complete"
+				color = "\033[33m"
+			case "REPLACE":
+				actionVerb = "Replacement complete"
+				color = "\033[33m"
+			case "DELETE":
+				actionVerb = "Destruction complete"
+				color = "\033[31m"
+			}
+			fmt.Printf("%s%s: %s after %s\033[0m\n", color, event.Address, actionVerb, event.Duration.Round(time.Millisecond))
+		case "failed":
+			fmt.Printf("\033[31m%s: FAILED (%v)\033[0m\n", event.Address, event.Error)
+		}
+	}
+
+	newState, err := eng.ApplyPlanWithCallback(ctx, plan, currentState, callback)
 	if err != nil {
 		// Write partial state on failure so successful changes aren't lost
 		_ = stateMgr.Write(ctx, currentState)

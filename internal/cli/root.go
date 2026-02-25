@@ -4,6 +4,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	noColor bool
+	targets []string
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "picklr",
 	Short: "PKL-native Infrastructure as Code",
@@ -11,7 +16,7 @@ var rootCmd = &cobra.Command{
 
 It provides a clean, deterministic way to manage cloud infrastructure with:
   • Type-safe resource definitions
-  • Git-native state management  
+  • Git-native state management
   • Human-readable plans and state files
   • Unified language for config, plans, and state`,
 }
@@ -22,6 +27,9 @@ func Execute() error {
 }
 
 func init() {
+	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
+	rootCmd.PersistentFlags().StringSliceVar(&targets, "target", nil, "Restrict operations to specific resources (can be specified multiple times)")
+
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(planCmd)

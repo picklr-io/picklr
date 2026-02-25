@@ -14,7 +14,8 @@ import (
 
 // Engine orchestrates the lifecycle of resources.
 type Engine struct {
-	registry *provider.Registry
+	registry        *provider.Registry
+	ContinueOnError bool // If true, apply continues past failures instead of stopping
 }
 
 func NewEngine(registry *provider.Registry) *Engine {

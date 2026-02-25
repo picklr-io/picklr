@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -33,8 +34,11 @@ func (e *Engine) ApplyPlan(ctx context.Context, plan *ir.Plan, state *ir.State) 
 
 // ApplyPlanWithCallback executes a plan with progress event callbacks.
 // It applies resources in parallel respecting dependency ordering.
+// If e.ContinueOnError is true, apply will continue past individual resource
+// failures and return an aggregated error at the end.
 func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state *ir.State, callback ApplyCallback) (*ir.State, error) {
 	var mu sync.Mutex
+	var errs []error
 
 	emit := func(event ApplyEvent) {
 		if callback != nil {
@@ -62,7 +66,10 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 	// Build dependency graph for parallel execution of creates/updates
 	if len(createUpdates) > 1 {
 		if err := e.applyParallel(ctx, createUpdates, state, &stateIndex, &mu, emit); err != nil {
-			return state, err
+			if !e.ContinueOnError {
+				return state, err
+			}
+			errs = append(errs, err)
 		}
 	} else {
 		// Single change or empty - apply sequentially
@@ -74,7 +81,11 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "started"})
 			if err := e.applyChange(ctx, change, state, &stateIndex, &mu); err != nil {
 				emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "failed", Duration: time.Since(start), Error: err})
-				return state, err
+				if !e.ContinueOnError {
+					return state, err
+				}
+				errs = append(errs, err)
+				continue
 			}
 			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "completed", Duration: time.Since(start)})
 		}
@@ -83,7 +94,10 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 	// Apply deletes (reverse dependency order, parallel where possible)
 	if len(deletes) > 1 {
 		if err := e.applyParallel(ctx, deletes, state, &stateIndex, &mu, emit); err != nil {
-			return state, err
+			if !e.ContinueOnError {
+				return state, err
+			}
+			errs = append(errs, err)
 		}
 	} else {
 		for _, change := range deletes {
@@ -94,7 +108,11 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "started"})
 			if err := e.applyChange(ctx, change, state, &stateIndex, &mu); err != nil {
 				emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "failed", Duration: time.Since(start), Error: err})
-				return state, err
+				if !e.ContinueOnError {
+					return state, err
+				}
+				errs = append(errs, err)
+				continue
 			}
 			emit(ApplyEvent{Address: change.Address, Action: change.Action, Status: "completed", Duration: time.Since(start)})
 		}
@@ -102,6 +120,10 @@ func (e *Engine) ApplyPlanWithCallback(ctx context.Context, plan *ir.Plan, state
 
 	state.Serial++
 	state.Outputs = plan.Outputs
+
+	if len(errs) > 0 {
+		return state, fmt.Errorf("%d resource(s) failed: %w", len(errs), errors.Join(errs...))
+	}
 
 	return state, nil
 }
@@ -141,9 +163,11 @@ func (e *Engine) applyParallel(ctx context.Context, changes []*ir.ResourceChange
 
 	// Parallel execution using a semaphore and dependency tracking
 	completed := make(map[string]bool)
+	failed := make(map[string]bool)
 	completedMu := sync.Mutex{}
 	completedCond := sync.NewCond(&completedMu)
 	var firstErr error
+	var allErrs []error
 	sem := make(chan struct{}, defaultParallelism)
 
 	var wg sync.WaitGroup
@@ -156,16 +180,28 @@ func (e *Engine) applyParallel(ctx context.Context, changes []*ir.ResourceChange
 			// Wait for dependencies to complete
 			completedMu.Lock()
 			for {
-				if firstErr != nil {
+				if firstErr != nil && !e.ContinueOnError {
 					completedMu.Unlock()
 					return
 				}
 				allDepsReady := true
+				depFailed := false
 				for dep := range deps[c.Address] {
+					if failed[dep] {
+						depFailed = true
+						break
+					}
 					if !completed[dep] {
 						allDepsReady = false
 						break
 					}
+				}
+				// If a dependency failed, skip this resource
+				if depFailed {
+					failed[c.Address] = true
+					completedMu.Unlock()
+					completedCond.Broadcast()
+					return
 				}
 				if allDepsReady {
 					break
@@ -197,6 +233,8 @@ func (e *Engine) applyParallel(ctx context.Context, changes []*ir.ResourceChange
 				if firstErr == nil {
 					firstErr = err
 				}
+				allErrs = append(allErrs, err)
+				failed[c.Address] = true
 				completedMu.Unlock()
 				completedCond.Broadcast()
 				return
@@ -213,6 +251,9 @@ func (e *Engine) applyParallel(ctx context.Context, changes []*ir.ResourceChange
 
 	wg.Wait()
 
+	if e.ContinueOnError && len(allErrs) > 0 {
+		return fmt.Errorf("%d resource(s) failed: %w", len(allErrs), errors.Join(allErrs...))
+	}
 	if firstErr != nil {
 		return firstErr
 	}

@@ -20,6 +20,7 @@ var (
 	applyProperties  map[string]string
 	applyJSON        bool
 	applyRefresh     bool
+	applyOnError     string
 )
 
 var applyCmd = &cobra.Command{
@@ -37,6 +38,7 @@ func init() {
 	applyCmd.Flags().StringToStringVarP(&applyProperties, "prop", "D", nil, "Set external properties (format: key=value)")
 	applyCmd.Flags().BoolVar(&applyJSON, "json", false, "Output in JSON format")
 	applyCmd.Flags().BoolVar(&applyRefresh, "refresh", false, "Refresh state before applying")
+	applyCmd.Flags().StringVar(&applyOnError, "on-error", "fail", "Error handling mode: 'fail' (stop on first error) or 'continue' (apply remaining resources)")
 }
 
 func runApply(cmd *cobra.Command, args []string) error {
@@ -82,6 +84,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	stateMgr := state.NewManager(filepath.Join(wd, WorkspaceStatePath()), evaluator)
 	registry := provider.NewRegistry()
 	eng := engine.NewEngine(registry)
+	eng.ContinueOnError = applyOnError == "continue"
 
 	// 2. Lock state
 	if err := stateMgr.Lock(); err != nil {

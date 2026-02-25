@@ -62,7 +62,13 @@ func runApply(cmd *cobra.Command, args []string) error {
 	registry := provider.NewRegistry()
 	eng := engine.NewEngine(registry)
 
-	// 2. Load Config & State
+	// 2. Lock state
+	if err := stateMgr.Lock(); err != nil {
+		return err
+	}
+	defer stateMgr.Unlock()
+
+	// 3. Load Config & State
 	fmt.Print("Loading configuration... ")
 	cfg, err := evaluator.LoadConfig(ctx, entryPoint, applyProperties)
 	if err != nil {

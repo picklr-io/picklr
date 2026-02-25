@@ -185,6 +185,19 @@ func (d *DAG) topoSort() ([]string, error) {
 	return sorted, nil
 }
 
+// ResourceAddrPublic returns the address of a resource (type.name). Exported for CLI use.
+func ResourceAddrPublic(res *ir.Resource) string {
+	return resourceAddr(res)
+}
+
+// Dependencies returns the list of dependencies for a given address.
+func (d *DAG) Dependencies(addr string) []string {
+	if node, ok := d.nodes[addr]; ok {
+		return node.edges
+	}
+	return nil
+}
+
 // resourceAddr returns the address of a resource (type.name).
 func resourceAddr(res *ir.Resource) string {
 	t := res.Type

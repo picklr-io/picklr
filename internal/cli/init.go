@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"crypto/rand"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -47,20 +48,21 @@ outputs {
 		fmt.Printf("Created %s\n", mainPkl)
 	}
 
-	// Create empty state file
+	// Create empty state file with UUID lineage
 	statePath := filepath.Join(".picklr", "state.pkl")
 	if _, err := os.Stat(statePath); os.IsNotExist(err) {
-		content := `// Picklr state file - DO NOT EDIT MANUALLY unless you know what you're doing
+		lineage := generateUUID()
+		content := fmt.Sprintf(`// Picklr state file - DO NOT EDIT MANUALLY unless you know what you're doing
 amends "picklr:State"
 
 version = 1
 serial = 0
-lineage = ""
+lineage = %q
 
 resources {}
 
 outputs {}
-`
+`, lineage)
 		if err := os.WriteFile(statePath, []byte(content), 0644); err != nil {
 			return fmt.Errorf("failed to create state file: %w", err)
 		}
@@ -74,4 +76,14 @@ outputs {}
 	fmt.Println("  3. Run 'picklr apply' to create your infrastructure")
 
 	return nil
+}
+
+// generateUUID generates a v4 UUID without external dependencies.
+func generateUUID() string {
+	b := make([]byte, 16)
+	rand.Read(b)
+	b[6] = (b[6] & 0x0f) | 0x40 // Version 4
+	b[8] = (b[8] & 0x3f) | 0x80 // Variant 10
+	return fmt.Sprintf("%08x-%04x-%04x-%04x-%12x",
+		b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }

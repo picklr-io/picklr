@@ -27,4 +27,12 @@ func init() {
 	rootCmd.AddCommand(planCmd)
 	rootCmd.AddCommand(applyCmd)
 	rootCmd.AddCommand(destroyCmd)
+	rootCmd.AddCommand(stateCmd)
+	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(outputCmd)
+	rootCmd.AddCommand(showCmd)
+	rootCmd.AddCommand(refreshCmd)
+	rootCmd.AddCommand(graphCmd)
+	rootCmd.AddCommand(taintCmd)
+	rootCmd.AddCommand(untaintCmd)
 }

@@ -61,7 +61,13 @@ func runDestroy(cmd *cobra.Command, args []string) error {
 	registry := provider.NewRegistry()
 	eng := engine.NewEngine(registry)
 
-	// 2. Read state
+	// 2. Lock state
+	if err := stateMgr.Lock(); err != nil {
+		return err
+	}
+	defer stateMgr.Unlock()
+
+	// 3. Read state
 	fmt.Print("Reading state... ")
 	currentState, err := stateMgr.Read(ctx)
 	if err != nil {

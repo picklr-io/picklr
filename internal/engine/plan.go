@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/picklr-io/picklr/internal/ir"
 	"github.com/picklr-io/picklr/internal/provider"
@@ -25,7 +26,7 @@ func NewEngine(registry *provider.Registry) *Engine {
 func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State) (*ir.Plan, error) {
 	plan := &ir.Plan{
 		Metadata: &ir.PlanMetadata{
-			// Timestamp and hashes would be set here
+			Timestamp: time.Now().UTC().Format(time.RFC3339),
 		},
 		Changes: []*ir.ResourceChange{},
 		Summary: &ir.PlanSummary{},
@@ -34,32 +35,42 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 
 	// 1. Load all required providers
 	for _, res := range cfg.Resources {
-		// Ensure provider is loaded
 		if err := e.registry.LoadProvider(res.Provider); err != nil {
 			return nil, fmt.Errorf("failed to load provider %s: %w", res.Provider, err)
 		}
 	}
 
-	// 2. Build state map for quick lookup
+	// 2. Build dependency graph for ordering
+	dag, err := BuildDAG(cfg.Resources)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build dependency graph: %w", err)
+	}
+
+	// 3. Build state map for quick lookup
 	stateMap := make(map[string]*ir.ResourceState)
 	for _, res := range state.Resources {
-		// Address: type.name (e.g., null_resource.my_test)
 		addr := fmt.Sprintf("%s.%s", res.Type, res.Name)
 		stateMap[addr] = res
 	}
 
-	// 3. Iterate desired resources (Create/Update logic)
+	// 4. Build config map for quick lookup
+	configByAddr := make(map[string]*ir.Resource)
 	for _, res := range cfg.Resources {
-		// fmt.Printf("DEBUG: Resource %s Properties: %+v\n", res.Name, res.Properties)
+		addr := resourceAddr(res)
+		configByAddr[addr] = res
+	}
 
-		// Infer or use Type.
-		resourceType := res.Type
-		if resourceType == "" {
-			// Fallback for null provider if missing
-			resourceType = "null_resource"
+	// 5. Iterate desired resources in dependency order
+	for _, addr := range dag.CreationOrder() {
+		res, ok := configByAddr[addr]
+		if !ok {
+			continue
 		}
 
-		addr := fmt.Sprintf("%s.%s", resourceType, res.Name)
+		resourceType := res.Type
+		if resourceType == "" {
+			resourceType = "null_resource"
+		}
 
 		prov, err := e.registry.Get(res.Provider)
 		if err != nil {
@@ -73,11 +84,8 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 			return nil, fmt.Errorf("failed to marshal properties for %s: %w", res.Name, err)
 		}
 
-		// fmt.Printf("DEBUG: Resource %s JSON: %s\n", res.Name, string(desiredJSON))
-
 		var priorJSON []byte
 		if prior, ok := stateMap[addr]; ok {
-			// Pass prior outputs as state
 			priorJSON, _ = json.Marshal(prior.Outputs)
 		}
 
@@ -92,16 +100,28 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 		}
 
 		if resp.Action != pb.PlanResponse_NOOP {
+			// Enforce lifecycle rules
+			if err := enforceLifecycle(res, resp.Action, addr); err != nil {
+				return nil, err
+			}
+
+			// Apply IgnoreChanges filtering
+			action := resp.Action
+			if res.Lifecycle != nil && len(res.Lifecycle.IgnoreChanges) > 0 && action == pb.PlanResponse_UPDATE {
+				action = filterIgnoredChanges(res, resp, stateMap[addr])
+			}
+
+			if action == pb.PlanResponse_NOOP {
+				plan.Summary.NoOp++
+				continue
+			}
+
 			change := &ir.ResourceChange{
 				Address: addr,
-				Action:  resp.Action.String(), // "CREATE", "UPDATE", "REPLACE"
-				Desired: res,                  // Set Desired
-				// Prior: ... (prior is ResourceState, not Resource. We need to map properly or at least set something)
-				// For now, Desired is what matters for Create/Update.
+				Action:  action.String(),
+				Desired: res,
 			}
-			// If we have prior, ideally we map it to Resource struct if possible, or we need to change IR?
-			// The IR expects *Resource.
-			// ResourceState has Inputs. We can reconstruct Resource from ResourceState inputs.
+
 			if prior, ok := stateMap[addr]; ok {
 				change.Prior = &ir.Resource{
 					Type:       prior.Type,
@@ -109,10 +129,14 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 					Provider:   prior.Provider,
 					Properties: prior.Inputs,
 				}
+				change.Diff = buildPropertyDiff(prior.Inputs, res.Properties)
+			} else {
+				change.Diff = buildCreateDiff(res.Properties)
 			}
+
 			plan.Changes = append(plan.Changes, change)
 
-			switch resp.Action {
+			switch action {
 			case pb.PlanResponse_CREATE:
 				plan.Summary.Create++
 			case pb.PlanResponse_UPDATE:
@@ -127,52 +151,134 @@ func (e *Engine) CreatePlan(ctx context.Context, cfg *ir.Config, state *ir.State
 		}
 	}
 
-	// 4. Handle Deletions
-	// Iterate valid resources in state, if not in config, plan delete.
+	// 6. Handle Deletions (resources in state but not in config)
 	configMap := make(map[string]bool)
 	for _, res := range cfg.Resources {
-		resourceType := res.Type
-		if resourceType == "" {
-			resourceType = "null_resource"
-		}
-		addr := fmt.Sprintf("%s.%s", resourceType, res.Name)
+		addr := resourceAddr(res)
 		configMap[addr] = true
 	}
 
 	for _, res := range state.Resources {
 		addr := fmt.Sprintf("%s.%s", res.Type, res.Name)
 		if !configMap[addr] {
-			// Resource exists in state but not in config -> DELETE
-			prov, err := e.registry.Get(res.Provider)
-			if err == nil {
-				priorJSON, _ := json.Marshal(res.Outputs)
-				resp, err := prov.Plan(ctx, &pb.PlanRequest{
-					Type:              res.Type,
-					Name:              res.Name,
-					DesiredConfigJson: nil, // Indicates deletion
-					PriorStateJson:    priorJSON,
-				})
-
-				if err == nil && resp.Action == pb.PlanResponse_DELETE {
-					change := &ir.ResourceChange{
-						Address: addr,
-						Action:  "DELETE",
-					}
-					plan.Changes = append(plan.Changes, change)
-					plan.Summary.Delete++
-				} else {
-					change := &ir.ResourceChange{
-						Address: addr,
-						Action:  "DELETE",
-					}
-					plan.Changes = append(plan.Changes, change)
-					plan.Summary.Delete++
-				}
+			change := &ir.ResourceChange{
+				Address: addr,
+				Action:  "DELETE",
+				Prior: &ir.Resource{
+					Type:       res.Type,
+					Name:       res.Name,
+					Provider:   res.Provider,
+					Properties: res.Inputs,
+				},
+				Diff: buildDeleteDiff(res.Inputs),
 			}
+			plan.Changes = append(plan.Changes, change)
+			plan.Summary.Delete++
 		}
 	}
 
 	return plan, nil
+}
+
+// enforceLifecycle checks lifecycle rules and returns an error if violated.
+func enforceLifecycle(res *ir.Resource, action pb.PlanResponse_Action, addr string) error {
+	if res.Lifecycle == nil {
+		return nil
+	}
+
+	if res.Lifecycle.PreventDestroy && (action == pb.PlanResponse_DELETE || action == pb.PlanResponse_REPLACE) {
+		return fmt.Errorf("resource %s has prevent_destroy set but plan requires destruction", addr)
+	}
+
+	return nil
+}
+
+// filterIgnoredChanges checks if all changed attributes are in IgnoreChanges.
+// If so, downgrades the action to NOOP.
+func filterIgnoredChanges(res *ir.Resource, resp *pb.PlanResponse, prior *ir.ResourceState) pb.PlanResponse_Action {
+	if prior == nil || res.Lifecycle == nil {
+		return resp.Action
+	}
+
+	ignoreSet := make(map[string]bool)
+	for _, attr := range res.Lifecycle.IgnoreChanges {
+		ignoreSet[attr] = true
+	}
+
+	if len(resp.ChangedAttributes) > 0 {
+		allIgnored := true
+		for _, attr := range resp.ChangedAttributes {
+			if !ignoreSet[attr] {
+				allIgnored = false
+				break
+			}
+		}
+		if allIgnored {
+			return pb.PlanResponse_NOOP
+		}
+	}
+
+	return resp.Action
+}
+
+// buildPropertyDiff compares prior and desired properties and returns a diff map.
+func buildPropertyDiff(prior, desired map[string]any) map[string]*ir.PropertyDiff {
+	diff := make(map[string]*ir.PropertyDiff)
+
+	allKeys := make(map[string]bool)
+	for k := range prior {
+		allKeys[k] = true
+	}
+	for k := range desired {
+		allKeys[k] = true
+	}
+
+	for k := range allKeys {
+		priorVal, inPrior := prior[k]
+		desiredVal, inDesired := desired[k]
+
+		if !inPrior {
+			diff[k] = &ir.PropertyDiff{
+				After:  desiredVal,
+				Action: "create",
+			}
+		} else if !inDesired {
+			diff[k] = &ir.PropertyDiff{
+				Before: priorVal,
+				Action: "delete",
+			}
+		} else if fmt.Sprintf("%v", priorVal) != fmt.Sprintf("%v", desiredVal) {
+			diff[k] = &ir.PropertyDiff{
+				Before: priorVal,
+				After:  desiredVal,
+				Action: "update",
+			}
+		}
+	}
+
+	return diff
+}
+
+func buildCreateDiff(props map[string]any) map[string]*ir.PropertyDiff {
+	diff := make(map[string]*ir.PropertyDiff)
+	for k, v := range props {
+		diff[k] = &ir.PropertyDiff{
+			After:  v,
+			Action: "create",
+		}
+	}
+	return diff
+}
+
+func buildDeleteDiff(props map[string]any) map[string]*ir.PropertyDiff {
+	diff := make(map[string]*ir.PropertyDiff)
+	for k, v := range props {
+		diff[k] = &ir.PropertyDiff{
+			Before: v,
+			Action: "delete",
+		}
+	}
+	return diff
 }
 
 func normalizeValue(v any) any {

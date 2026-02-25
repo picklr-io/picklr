@@ -5,8 +5,9 @@ import (
 )
 
 var (
-	noColor bool
-	targets []string
+	noColor  bool
+	targets  []string
+	logLevel string
 )
 
 var rootCmd = &cobra.Command{
@@ -29,6 +30,7 @@ func Execute() error {
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&noColor, "no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().StringSliceVar(&targets, "target", nil, "Restrict operations to specific resources (can be specified multiple times)")
+	rootCmd.PersistentFlags().StringVar(&logLevel, "log-level", "info", "Set log level (debug, info, warn, error)")
 
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(validateCmd)

@@ -97,17 +97,31 @@ func renderPlanChanges(plan *ir.Plan) {
 // renderPropertyDiff prints structured property diffs.
 func renderPropertyDiff(change *ir.ResourceChange, color string) {
 	for key, diff := range change.Diff {
+		val := func(v any) string {
+			if diff.Sensitive {
+				return "(sensitive)"
+			}
+			return formatValue(v)
+		}
 		switch diff.Action {
 		case "create":
-			fmt.Printf("\033[32m      + %s = %v\033[0m\n", key, formatValue(diff.After))
+			fmt.Printf("%s      + %s = %v%s\n", colorize("\033[32m"), key, val(diff.After), colorize("\033[0m"))
 		case "delete":
-			fmt.Printf("\033[31m      - %s = %v\033[0m\n", key, formatValue(diff.Before))
+			fmt.Printf("%s      - %s = %v%s\n", colorize("\033[31m"), key, val(diff.Before), colorize("\033[0m"))
 		case "update":
-			fmt.Printf("\033[33m      ~ %s = %v -> %v\033[0m\n", key, formatValue(diff.Before), formatValue(diff.After))
+			fmt.Printf("%s      ~ %s = %v -> %v%s\n", colorize("\033[33m"), key, val(diff.Before), val(diff.After), colorize("\033[0m"))
 		default:
-			fmt.Printf("%s        %s = %v\n", color, key, formatValue(diff.After))
+			fmt.Printf("%s        %s = %v\n", color, key, val(diff.After))
 		}
 	}
+}
+
+// colorize returns the ANSI color code, or empty string if --no-color is set.
+func colorize(code string) string {
+	if noColor {
+		return ""
+	}
+	return code
 }
 
 // renderInlineDiff compares prior and desired property maps and prints a diff.

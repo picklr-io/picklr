@@ -59,12 +59,7 @@ func runApply(cmd *cobra.Command, args []string) error {
 	// 1. Initialize Components
 	evaluator := eval.NewEvaluator(wd)
 	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
-
 	registry := provider.NewRegistry()
-	if err := registry.LoadProvider("null"); err != nil {
-		return fmt.Errorf("failed to load null provider: %w", err)
-	}
-
 	eng := engine.NewEngine(registry)
 
 	// 2. Load Config & State
@@ -76,14 +71,24 @@ func runApply(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println("OK")
 
-	state, err := stateMgr.Read(ctx)
+	// Auto-load providers required by the config
+	if err := loadRequiredProviders(registry, cfg); err != nil {
+		return err
+	}
+
+	currentState, err := stateMgr.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read state: %w", err)
 	}
 
+	// Also load providers for resources already in state (needed for DELETE)
+	if err := loadStateProviders(registry, currentState); err != nil {
+		return err
+	}
+
 	// 3. Create Plan
 	fmt.Print("Calculating plan... ")
-	plan, err := eng.CreatePlan(ctx, cfg, state)
+	plan, err := eng.CreatePlan(ctx, cfg, currentState)
 	if err != nil {
 		fmt.Println("FAILED")
 		return fmt.Errorf("plan generation failed: %w", err)
@@ -92,55 +97,14 @@ func runApply(cmd *cobra.Command, args []string) error {
 
 	if len(plan.Changes) == 0 {
 		fmt.Println("No changes. Infrastructure is up-to-date.")
-	} else {
-		fmt.Println("\nPicklr will perform the following actions:")
-
-		for _, change := range plan.Changes {
-			symbol := "~"
-			switch change.Action {
-			case "CREATE":
-				symbol = "+"
-			case "DELETE":
-				symbol = "-"
-			case "REPLACE":
-				symbol = "-/+"
-			case "NOOP":
-				symbol = " "
-			}
-
-			// Colorize output based on action
-			color := "\033[0m" // Reset
-			if change.Action == "CREATE" {
-				color = "\033[32m" // Green
-			} else if change.Action == "DELETE" {
-				color = "\033[31m" // Red
-			} else if change.Action == "UPDATE" || change.Action == "REPLACE" {
-				color = "\033[33m" // Yellow
-			}
-
-			var resourceType, resourceName string
-			if change.Desired != nil {
-				resourceType = change.Desired.Type
-				resourceName = change.Desired.Name
-			} else if change.Prior != nil {
-				resourceType = change.Prior.Type
-				resourceName = change.Prior.Name
-			}
-
-			fmt.Printf("\n%s  # %s will be %s%s\n", color, change.Address, change.Action, "\033[0m")
-			fmt.Printf("%s  %s resource \"%s\" \"%s\" {\n", color, symbol, resourceType, resourceName)
-			fmt.Printf("%s      %s\n", color, "...")
-			fmt.Printf("%s    }%s\n", color, "\033[0m")
-		}
+		return nil
 	}
 
+	fmt.Println("\nPicklr will perform the following actions:")
+	renderPlanChanges(plan)
+
 	// 4. Output Summary & Confirm
-	fmt.Println("\nPlan Summary:")
-	fmt.Printf("  Create:  %d\n", plan.Summary.Create)
-	fmt.Printf("  Update:  %d\n", plan.Summary.Update)
-	fmt.Printf("  Delete:  %d\n", plan.Summary.Delete)
-	fmt.Printf("  Replace: %d\n", plan.Summary.Replace)
-	fmt.Printf("  NoOp:    %d\n", plan.Summary.NoOp)
+	renderPlanSummary(plan)
 
 	if !applyAutoApprove {
 		fmt.Print("\nDo you want to perform these actions? (y/n): ")
@@ -155,27 +119,17 @@ func runApply(cmd *cobra.Command, args []string) error {
 	// 5. Apply Plan
 	fmt.Printf("\nApplying %d changes...\n", len(plan.Changes))
 
-	// Create a channel to receive progress updates from the engine
-	// Note: Engine Update logic needs to support this, but for now we wrap the simple ApplyPlan
-	// In a real TF implementation, the Engine emits events.
-	// As a quick win, we will iterate the plan locally to match the UI expectation
-	// even if the engine executes them in a batch.
-
-	// TODO: Refactor Engine.ApplyPlan to take a callback for progress events.
-	// For now, we will trust the engine logs via a slightly better wrapper if possible,
-	// but since ApplyPlan is atomic in the current Engine, we can't easily interject.
-	// We will assume the User wants this visual NOW, so we should look at Engine.ApplyPlan.
-
-	newState, err := eng.ApplyPlan(ctx, plan, state)
+	newState, err := eng.ApplyPlan(ctx, plan, currentState)
 	if err != nil {
+		// Write partial state on failure so successful changes aren't lost
+		_ = stateMgr.Write(ctx, currentState)
 		return fmt.Errorf("apply failed: %w", err)
 	}
 
-	// Fake the granular output for now since the Engine is synchronous/atomic?
-	// Actually, let's verify Engine.ApplyPlan.
-	// If it blocked, we'd see nothing.
-	// We should probably modify Engine.ApplyPlan instead of faking it.
-	// But let's leave this tool call as is for now to print the final success.
+	// 6. Persist state
+	if err := stateMgr.Write(ctx, newState); err != nil {
+		return fmt.Errorf("failed to write state: %w", err)
+	}
 
 	fmt.Println("\nApply complete! Resources: " +
 		fmt.Sprintf("%d added, %d changed, %d destroyed.", plan.Summary.Create, plan.Summary.Update, plan.Summary.Delete))

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/picklr-io/picklr/internal/eval"
 	"github.com/picklr-io/picklr/internal/ir"
@@ -42,13 +43,7 @@ func (m *Manager) Read(ctx context.Context) (*ir.State, error) {
 }
 
 // Write saves the state to the configured path.
-// For MVP, we write a simplified PKL representation.
-// Detailed PKL generation will be improved later.
 func (m *Manager) Write(ctx context.Context, state *ir.State) error {
-	// TODO: Use a proper PKL generator. For now, we'll write a basic template.
-	// This is a placeholder to verify the flow.
-	// Real implementation needs to serialize the `ir.State` struct back to PKL syntax.
-
 	// Ensure directory exists
 	if err := os.MkdirAll(filepath.Dir(m.path), 0755); err != nil {
 		return fmt.Errorf("failed to create state directory: %w", err)
@@ -71,18 +66,7 @@ func (m *Manager) Write(ctx context.Context, state *ir.State) error {
 	if len(state.Outputs) > 0 {
 		fmt.Fprintf(f, "outputs {\n")
 		for k, v := range state.Outputs {
-			switch val := v.(type) {
-			case string:
-				fmt.Fprintf(f, "  [%q] = %q\n", k, val)
-			case int, int64, float64:
-				fmt.Fprintf(f, "  [%q] = %v\n", k, val)
-			case bool:
-				fmt.Fprintf(f, "  [%q] = %t\n", k, val)
-			default:
-				// Fallback for complex types (maps, lists) - not ideal but better than nothing
-				// For real implementation we need full recursion.
-				fmt.Fprintf(f, "  [%q] = \"<complex type>\"\n", k)
-			}
+			fmt.Fprintf(f, "  [%q] = %s\n", k, serializePklValue(v, 1))
 		}
 		fmt.Fprintf(f, "}\n\n")
 	} else {
@@ -96,13 +80,92 @@ func (m *Manager) Write(ctx context.Context, state *ir.State) error {
 		fmt.Fprintf(f, "    type = %q\n", res.Type)
 		fmt.Fprintf(f, "    name = %q\n", res.Name)
 		fmt.Fprintf(f, "    provider = %q\n", res.Provider)
-		// TODO: Serialize inputs/outputs map to PKL
-		fmt.Fprintf(f, "    inputs = new {}\n")
+
+		// Serialize inputs
+		if len(res.Inputs) > 0 {
+			fmt.Fprintf(f, "    inputs {\n")
+			for k, v := range res.Inputs {
+				fmt.Fprintf(f, "      [%q] = %s\n", k, serializePklValue(v, 3))
+			}
+			fmt.Fprintf(f, "    }\n")
+		} else {
+			fmt.Fprintf(f, "    inputs = new {}\n")
+		}
+
 		fmt.Fprintf(f, "    inputsHash = %q\n", res.InputsHash)
-		fmt.Fprintf(f, "    outputs = new {}\n")
+
+		// Serialize outputs
+		if len(res.Outputs) > 0 {
+			fmt.Fprintf(f, "    outputs {\n")
+			for k, v := range res.Outputs {
+				fmt.Fprintf(f, "      [%q] = %s\n", k, serializePklValue(v, 3))
+			}
+			fmt.Fprintf(f, "    }\n")
+		} else {
+			fmt.Fprintf(f, "    outputs = new {}\n")
+		}
+
 		fmt.Fprintf(f, "  }\n")
 	}
 	fmt.Fprintf(f, "}\n")
 
 	return nil
+}
+
+// serializePklValue recursively serializes a Go value to PKL syntax.
+func serializePklValue(v any, indentLevel int) string {
+	indent := strings.Repeat("  ", indentLevel)
+
+	switch val := v.(type) {
+	case string:
+		return fmt.Sprintf("%q", val)
+	case bool:
+		return fmt.Sprintf("%t", val)
+	case int:
+		return fmt.Sprintf("%d", val)
+	case int64:
+		return fmt.Sprintf("%d", val)
+	case float64:
+		if val == float64(int64(val)) {
+			return fmt.Sprintf("%d", int64(val))
+		}
+		return fmt.Sprintf("%g", val)
+	case nil:
+		return "null"
+	case map[string]any:
+		if len(val) == 0 {
+			return "new {}"
+		}
+		var b strings.Builder
+		b.WriteString("new {\n")
+		for k, v := range val {
+			b.WriteString(fmt.Sprintf("%s  [%q] = %s\n", indent, k, serializePklValue(v, indentLevel+1)))
+		}
+		b.WriteString(indent + "}")
+		return b.String()
+	case map[any]any:
+		if len(val) == 0 {
+			return "new {}"
+		}
+		var b strings.Builder
+		b.WriteString("new {\n")
+		for k, v := range val {
+			b.WriteString(fmt.Sprintf("%s  [%q] = %s\n", indent, fmt.Sprintf("%v", k), serializePklValue(v, indentLevel+1)))
+		}
+		b.WriteString(indent + "}")
+		return b.String()
+	case []any:
+		if len(val) == 0 {
+			return "new Listing {}"
+		}
+		var b strings.Builder
+		b.WriteString("new Listing {\n")
+		for _, v := range val {
+			b.WriteString(fmt.Sprintf("%s  %s\n", indent, serializePklValue(v, indentLevel+1)))
+		}
+		b.WriteString(indent + "}")
+		return b.String()
+	default:
+		return fmt.Sprintf("%q", fmt.Sprintf("%v", val))
+	}
 }

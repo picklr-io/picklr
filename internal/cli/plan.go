@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -58,18 +59,12 @@ func runPlan(cmd *cobra.Command, args []string) error {
 			entryPoint = filepath.Base(absPath)
 		}
 	}
-	fmt.Printf("DEBUG: wd=%s, entryPoint=%s\n", wd, entryPoint)
 	ctx := cmd.Context()
 
 	// 1. Initialize Components
 	evaluator := eval.NewEvaluator(wd)
 	stateMgr := state.NewManager(filepath.Join(wd, ".picklr", "state.pkl"), evaluator)
-
 	registry := provider.NewRegistry()
-	if err := registry.LoadProvider("null"); err != nil {
-		return fmt.Errorf("failed to load null provider: %w", err)
-	}
-
 	eng := engine.NewEngine(registry)
 
 	// 2. Load Config
@@ -81,77 +76,52 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	}
 	fmt.Println("OK")
 
+	// Auto-load providers required by the config
+	if err := loadRequiredProviders(registry, cfg); err != nil {
+		return err
+	}
+
 	// 3. Load State
-	state, err := stateMgr.Read(ctx)
+	currentState, err := stateMgr.Read(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to read state: %w", err)
 	}
 
+	// Also load providers for resources in state (needed for DELETE planning)
+	if err := loadStateProviders(registry, currentState); err != nil {
+		return err
+	}
+
 	// 4. Create Plan
 	fmt.Print("Calculating plan... ")
-	plan, err := eng.CreatePlan(ctx, cfg, state)
+	plan, err := eng.CreatePlan(ctx, cfg, currentState)
 	if err != nil {
 		fmt.Println("FAILED")
 		return fmt.Errorf("plan generation failed: %w", err)
 	}
 	fmt.Println("OK")
 
-	// 5. Output Summary
-	fmt.Println("\nPlan Summary:")
-	fmt.Printf("  Create:  %d\n", plan.Summary.Create)
-	fmt.Printf("  Update:  %d\n", plan.Summary.Update)
-	fmt.Printf("  Delete:  %d\n", plan.Summary.Delete)
-	fmt.Printf("  Replace: %d\n", plan.Summary.Replace)
-	fmt.Printf("  NoOp:    %d\n", plan.Summary.NoOp)
-
+	// 5. Output
 	if len(plan.Changes) > 0 {
 		fmt.Println("\nPicklr will perform the following actions:")
-
-		for _, change := range plan.Changes {
-			symbol := "~"
-			switch change.Action {
-			case "CREATE":
-				symbol = "+"
-			case "DELETE":
-				symbol = "-"
-			case "REPLACE":
-				symbol = "-/+"
-			case "NOOP":
-				symbol = " "
-			}
-
-			// Colorize output based on action
-			color := "\033[0m" // Reset
-			if change.Action == "CREATE" {
-				color = "\033[32m" // Green
-			} else if change.Action == "DELETE" {
-				color = "\033[31m" // Red
-			} else if change.Action == "UPDATE" || change.Action == "REPLACE" {
-				color = "\033[33m" // Yellow
-			}
-
-			var resourceType, resourceName string
-			if change.Desired != nil {
-				resourceType = change.Desired.Type
-				resourceName = change.Desired.Name
-			} else if change.Prior != nil {
-				resourceType = change.Prior.Type
-				resourceName = change.Prior.Name
-			}
-
-			fmt.Printf("\n%s  # %s will be %s%s\n", color, change.Address, change.Action, "\033[0m")
-			fmt.Printf("%s  %s resource \"%s\" \"%s\" {\n", color, symbol, resourceType, resourceName)
-
-			// TODO: Render detailed diff of properties
-			// For now, identifying the resource is a massive step up.
-			fmt.Printf("%s      %s\n", color, "...")
-			fmt.Printf("%s    }%s\n", color, "\033[0m")
-		}
+		renderPlanChanges(plan)
 	} else {
 		fmt.Println("\nNo changes. Infrastructure is up-to-date.")
 	}
 
-	// TODO: Save plan to file if requested
+	renderPlanSummary(plan)
+
+	// Save plan to file if requested
+	if planOutFile != "" {
+		planJSON, err := json.MarshalIndent(plan, "", "  ")
+		if err != nil {
+			return fmt.Errorf("failed to marshal plan: %w", err)
+		}
+		if err := os.WriteFile(planOutFile, planJSON, 0644); err != nil {
+			return fmt.Errorf("failed to write plan to %s: %w", planOutFile, err)
+		}
+		fmt.Printf("\nPlan saved to %s\n", planOutFile)
+	}
 
 	return nil
 }

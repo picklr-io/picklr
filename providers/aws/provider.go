@@ -140,10 +140,6 @@ func (p *Provider) ensureClient(ctx context.Context, region string) error {
 	p.codecommitClient = codecommit.NewFromConfig(cfg)
 	p.codedeployClient = codedeploy.NewFromConfig(cfg)
 	p.codepipelineClient = codepipeline.NewFromConfig(cfg)
-	p.codebuildClient = codebuild.NewFromConfig(cfg)
-	p.codecommitClient = codecommit.NewFromConfig(cfg)
-	p.codedeployClient = codedeploy.NewFromConfig(cfg)
-	p.codepipelineClient = codepipeline.NewFromConfig(cfg)
 
 	return nil
 }

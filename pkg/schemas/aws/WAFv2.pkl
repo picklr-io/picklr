@@ -1,0 +1,148 @@
+module picklr.aws.WAFv2
+
+import "../Resource.pkl"
+
+/// A WAFv2 Web ACL.
+class WebACL extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the web ACL.
+  webAclName: String
+
+  /// The scope (REGIONAL or CLOUDFRONT).
+  scope: String = "REGIONAL"
+
+  /// A description of the web ACL.
+  description: String?
+
+  /// The action to perform if none of the rules match (allow or block).
+  defaultAction: String = "allow"
+
+  /// The rules for the web ACL.
+  rules: Listing<WebACLRule>?
+
+  /// The visibility configuration for CloudWatch metrics.
+  cloudWatchMetricsEnabled: Boolean = true
+
+  /// The metric name for CloudWatch.
+  metricName: String?
+
+  /// Whether to sample requests.
+  sampledRequestsEnabled: Boolean = true
+
+  /// Tags for the web ACL.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["web_acl_name"] = webAclName
+    ["scope"] = scope
+    ["description"] = description
+    ["default_action"] = defaultAction
+    ["rules"] =
+      if (rules != null)
+        rules
+          .toList()
+          .map((r) -> new Mapping {
+            ["name"] = r.name
+            ["priority"] = r.priority
+            ["action"] = r.action
+            ["managed_rule_group_name"] = r.managedRuleGroupName
+            ["managed_rule_group_vendor"] = r.managedRuleGroupVendor
+          })
+      else
+        null
+    ["cloud_watch_metrics_enabled"] = cloudWatchMetricsEnabled
+    ["metric_name"] = metricName
+    ["sampled_requests_enabled"] = sampledRequestsEnabled
+    ["tags"] = tags
+  }
+}
+
+class WebACLRule {
+  /// The name of the rule.
+  name: String
+
+  /// The priority of the rule.
+  priority: Int
+
+  /// The action to perform (allow, block, count).
+  action: String?
+
+  /// The name of the managed rule group.
+  managedRuleGroupName: String?
+
+  /// The vendor name of the managed rule group.
+  managedRuleGroupVendor: String?
+}
+
+/// A WAFv2 IP Set.
+class IPSet extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the IP set.
+  ipSetName: String
+
+  /// The scope (REGIONAL or CLOUDFRONT).
+  scope: String = "REGIONAL"
+
+  /// A description of the IP set.
+  description: String?
+
+  /// The IP address version (IPV4 or IPV6).
+  ipAddressVersion: String = "IPV4"
+
+  /// The addresses in CIDR notation.
+  addresses: Listing<String>
+
+  /// Tags for the IP set.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["ip_set_name"] = ipSetName
+    ["scope"] = scope
+    ["description"] = description
+    ["ip_address_version"] = ipAddressVersion
+    ["addresses"] = addresses
+    ["tags"] = tags
+  }
+}
+
+/// A WAFv2 Rule Group.
+class RuleGroup extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the rule group.
+  ruleGroupName: String
+
+  /// The scope (REGIONAL or CLOUDFRONT).
+  scope: String = "REGIONAL"
+
+  /// The capacity of the rule group (WCU).
+  capacity: Int
+
+  /// A description of the rule group.
+  description: String?
+
+  /// The visibility configuration for CloudWatch metrics.
+  cloudWatchMetricsEnabled: Boolean = true
+
+  /// The metric name for CloudWatch.
+  metricName: String?
+
+  /// Whether to sample requests.
+  sampledRequestsEnabled: Boolean = true
+
+  /// Tags for the rule group.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["rule_group_name"] = ruleGroupName
+    ["scope"] = scope
+    ["capacity"] = capacity
+    ["description"] = description
+    ["cloud_watch_metrics_enabled"] = cloudWatchMetricsEnabled
+    ["metric_name"] = metricName
+    ["sampled_requests_enabled"] = sampledRequestsEnabled
+    ["tags"] = tags
+  }
+}

@@ -36,6 +36,15 @@ import "GlobalAccelerator.pkl"
 import "Kinesis.pkl"
 import "MSK.pkl"
 import "XRay.pkl"
+import "EKS.pkl"
+import "ElastiCache.pkl"
+import "APIGatewayV2.pkl"
+import "Cognito.pkl"
+import "SSM.pkl"
+import "WAFv2.pkl"
+import "SES.pkl"
+import "CloudTrail.pkl"
+import "VPN.pkl"
 
 /// Configuration for the AWS Provider.
 class Config {
@@ -349,6 +358,83 @@ class Config {
   /// List of S3 Bucket Notifications.
   bucketNotifications: Listing<S3.BucketNotification>?
 
+  /// List of EKS Clusters.
+  eksClusters: Listing<EKS.Cluster>?
+
+  /// List of EKS Node Groups.
+  eksNodeGroups: Listing<EKS.NodeGroup>?
+
+  /// List of EKS Fargate Profiles.
+  eksFargateProfiles: Listing<EKS.FargateProfile>?
+
+  /// List of EKS Addons.
+  eksAddons: Listing<EKS.Addon>?
+
+  /// List of ElastiCache Replication Groups.
+  replicationGroups: Listing<ElastiCache.ReplicationGroup>?
+
+  /// List of ElastiCache Clusters.
+  cacheClusters: Listing<ElastiCache.CacheCluster>?
+
+  /// List of ElastiCache Subnet Groups.
+  cacheSubnetGroups: Listing<ElastiCache.SubnetGroup>?
+
+  /// List of ElastiCache Parameter Groups.
+  cacheParameterGroups: Listing<ElastiCache.ParameterGroup>?
+
+  /// List of API Gateway V2 APIs.
+  apiV2s: Listing<APIGatewayV2.Api>?
+
+  /// List of API Gateway V2 Stages.
+  stagesV2: Listing<APIGatewayV2.Stage>?
+
+  /// List of API Gateway V2 Routes.
+  routesV2: Listing<APIGatewayV2.Route>?
+
+  /// List of API Gateway V2 Integrations.
+  integrationsV2: Listing<APIGatewayV2.Integration>?
+
+  /// List of API Gateway V2 Domain Names.
+  domainNamesV2: Listing<APIGatewayV2.DomainName>?
+
+  /// List of Cognito User Pools.
+  userPools: Listing<Cognito.UserPool>?
+
+  /// List of Cognito User Pool Clients.
+  userPoolClients: Listing<Cognito.UserPoolClient>?
+
+  /// List of Cognito Identity Pools.
+  identityPools: Listing<Cognito.IdentityPool>?
+
+  /// List of SSM Parameters.
+  ssmParameters: Listing<SSM.Parameter>?
+
+  /// List of WAFv2 Web ACLs.
+  webAcls: Listing<WAFv2.WebACL>?
+
+  /// List of WAFv2 IP Sets.
+  ipSets: Listing<WAFv2.IPSet>?
+
+  /// List of WAFv2 Rule Groups.
+  wafRuleGroups: Listing<WAFv2.RuleGroup>?
+
+  /// List of SES Email Identities.
+  emailIdentities: Listing<SES.EmailIdentity>?
+
+  /// List of SES Configuration Sets.
+  configurationSets: Listing<SES.ConfigurationSet>?
+
+  /// List of CloudTrail Trails.
+  trails: Listing<CloudTrail.Trail>?
+
+  /// List of VPN Gateways.
+  vpnGateways: Listing<VPN.VpnGateway>?
+
+  /// List of Customer Gateways.
+  customerGateways: Listing<VPN.CustomerGateway>?
+
+  /// List of VPN Connections.
+  vpnConnections: Listing<VPN.VpnConnection>?
 
   /// Flattened list of all AWS resources.
   allResources: Listing<Resource.Resource> = new Listing {
@@ -463,5 +549,31 @@ class Config {
     ...(if (redshiftClusters != null) redshiftClusters else new Listing {})
     ...(if (redshiftSubnetGroups != null) redshiftSubnetGroups else new Listing {})
     ...(if (openSearchDomains != null) openSearchDomains else new Listing {})
+    ...(if (eksClusters != null) eksClusters else new Listing {})
+    ...(if (eksNodeGroups != null) eksNodeGroups else new Listing {})
+    ...(if (eksFargateProfiles != null) eksFargateProfiles else new Listing {})
+    ...(if (eksAddons != null) eksAddons else new Listing {})
+    ...(if (replicationGroups != null) replicationGroups else new Listing {})
+    ...(if (cacheClusters != null) cacheClusters else new Listing {})
+    ...(if (cacheSubnetGroups != null) cacheSubnetGroups else new Listing {})
+    ...(if (cacheParameterGroups != null) cacheParameterGroups else new Listing {})
+    ...(if (apiV2s != null) apiV2s else new Listing {})
+    ...(if (stagesV2 != null) stagesV2 else new Listing {})
+    ...(if (routesV2 != null) routesV2 else new Listing {})
+    ...(if (integrationsV2 != null) integrationsV2 else new Listing {})
+    ...(if (domainNamesV2 != null) domainNamesV2 else new Listing {})
+    ...(if (userPools != null) userPools else new Listing {})
+    ...(if (userPoolClients != null) userPoolClients else new Listing {})
+    ...(if (identityPools != null) identityPools else new Listing {})
+    ...(if (ssmParameters != null) ssmParameters else new Listing {})
+    ...(if (webAcls != null) webAcls else new Listing {})
+    ...(if (ipSets != null) ipSets else new Listing {})
+    ...(if (wafRuleGroups != null) wafRuleGroups else new Listing {})
+    ...(if (emailIdentities != null) emailIdentities else new Listing {})
+    ...(if (configurationSets != null) configurationSets else new Listing {})
+    ...(if (trails != null) trails else new Listing {})
+    ...(if (vpnGateways != null) vpnGateways else new Listing {})
+    ...(if (customerGateways != null) customerGateways else new Listing {})
+    ...(if (vpnConnections != null) vpnConnections else new Listing {})
   }
 }

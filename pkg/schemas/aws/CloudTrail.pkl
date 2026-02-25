@@ -1,0 +1,55 @@
+module picklr.aws.CloudTrail
+
+import "../Resource.pkl"
+
+/// A CloudTrail trail.
+class Trail extends Resource.Resource {
+  provider = "aws"
+
+  /// The name of the trail.
+  trailName: String
+
+  /// The name of the S3 bucket designated for publishing log files.
+  s3BucketName: String
+
+  /// The S3 key prefix that follows the name of the bucket.
+  s3KeyPrefix: String?
+
+  /// Whether the trail is publishing events from global services.
+  includeGlobalServiceEvents: Boolean = true
+
+  /// Whether the trail is created in all regions.
+  isMultiRegionTrail: Boolean = false
+
+  /// Whether log file validation is enabled.
+  enableLogFileValidation: Boolean = true
+
+  /// The ARN of the CloudWatch Logs log group.
+  cloudWatchLogsLogGroupArn: String?
+
+  /// The ARN of the role for the CloudWatch Logs endpoint.
+  cloudWatchLogsRoleArn: String?
+
+  /// The ARN of the KMS key used to encrypt the logs.
+  kmsKeyId: String?
+
+  /// Whether the trail is an organization trail.
+  isOrganizationTrail: Boolean = false
+
+  /// Tags for the trail.
+  tags: Mapping<String, String>?
+
+  properties = new Mapping {
+    ["trail_name"] = trailName
+    ["s3_bucket_name"] = s3BucketName
+    ["s3_key_prefix"] = s3KeyPrefix
+    ["include_global_service_events"] = includeGlobalServiceEvents
+    ["is_multi_region_trail"] = isMultiRegionTrail
+    ["enable_log_file_validation"] = enableLogFileValidation
+    ["cloud_watch_logs_log_group_arn"] = cloudWatchLogsLogGroupArn
+    ["cloud_watch_logs_role_arn"] = cloudWatchLogsRoleArn
+    ["kms_key_id"] = kmsKeyId
+    ["is_organization_trail"] = isOrganizationTrail
+    ["tags"] = tags
+  }
+}
